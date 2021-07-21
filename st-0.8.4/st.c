@@ -11,6 +11,7 @@
 #include <signal.h>
 #include <sys/ioctl.h>
 #include <sys/select.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <termios.h>
@@ -203,6 +204,8 @@ static void tstrsequence(uchar);
 
 static void drawregion(int, int, int, int);
 
+static void savepwd(const char *);
+
 static void selnormalize(void);
 static void selscroll(int, int);
 static void selsnap(int *, int *, int);
@@ -222,6 +225,7 @@ static Term term;
 static Selection sel;
 static CSIEscape csiescseq;
 static STREscape strescseq;
+static char *pwd;
 static int iofd = 1;
 static int cmdfd;
 static pid_t pid;
@@ -1868,6 +1872,10 @@ strhandle(void)
 			if (narg > 1)
 				xsettitle(strescseq.args[1]);
 			return;
+		case 7:
+			if (narg > 1)
+				savepwd(strescseq.args[1]);
+			return;
 		case 52:
 			if (narg > 2 && allowwindowops) {
 				dec = base64dec(strescseq.args[2]);
@@ -1970,6 +1978,40 @@ strreset(void)
 		.buf = xrealloc(strescseq.buf, STR_BUF_SIZ),
 		.siz = STR_BUF_SIZ,
 	};
+}
+
+void
+savepwd(const char *src)
+{
+	static size_t plen = 0;
+	size_t slen;
+	struct stat buf;
+
+	if (lstat(src, &buf) == -1 || !S_ISDIR(buf.st_mode)) {
+		fprintf(stderr, "savepwd: %s is not a directory\n", src);
+		return;
+	}
+	slen = strlen(src);
+	if (plen <= slen) {
+		plen = 2 * (slen + 1);
+		pwd = xrealloc(pwd, plen);
+	}
+	strcpy(pwd, src);
+}
+
+void
+newterm(const Arg *arg)
+{
+	switch (fork()) {
+	case -1:
+		die("fork failed: %s\n", strerror(errno));
+		break;
+	case 0:
+		if (pwd)
+			chdir(pwd);
+		execlp("st", "st", (char *)NULL);
+		break;
+	}
 }
 
 void
