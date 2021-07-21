@@ -1,1 +1,1 @@
-/media/storage/.temporary/st/st-0.8.4/config.def.h
+config.def.h
