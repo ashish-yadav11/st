@@ -129,16 +129,21 @@ static const char *colorname[] = {
 	"#1d2021", /* default background */
 	"#ebdbb2", /* default foreground */
 	"#bdae93", /* cursor */
+	"#504945", /* selection */
 };
 
 /*
  * Default colors (colorname index)
- * foreground, background, cursor, reverse cursor
+ * foreground, background, cursor, reverse cursor, selection
  */
 unsigned int defaultfg = 257;
 unsigned int defaultbg = 256;
 static unsigned int defaultcs = 258;
 static unsigned int defaultrcs = 256;
+static unsigned int selectionbg = 257;
+static unsigned int selectionfg = 7;
+/* Owerwrite selection foreground colours with selectionfg */
+static int ignoreselfg = 1;
 
 /*
  * Default shape of cursor
