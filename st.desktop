@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=st
+Comment=Simple terminal emulator for X from suckless
+Icon=utilities-terminal
+Exec=st
+Categories=System;TerminalEmulator
