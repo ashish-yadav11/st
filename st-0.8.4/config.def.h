@@ -115,14 +115,6 @@ static const char *colorname[] = {
 	"#8ec07c", /* cyan    */
 	"#fbf1c7", /* white   */
 
-	/* extra colors */
-	"#fe8019",
-	"#d65d0e",
-	"#3c3836",
-	"#504945",
-	"#bdae93",
-	"#ebdbb2",
-
 	[255] = 0,
 
 	/* more colors can be added after 255 to use with defaultXX */
