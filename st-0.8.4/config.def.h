@@ -140,8 +140,8 @@ unsigned int defaultfg = 257;
 unsigned int defaultbg = 256;
 static unsigned int defaultcs = 258;
 static unsigned int defaultrcs = 256;
-static unsigned int selectionbg = 257;
-static unsigned int selectionfg = 7;
+static unsigned int selectionbg = 259;
+static unsigned int selectionfg = 257;
 /* Owerwrite selection foreground colours with selectionfg */
 static int ignoreselfg = 1;
 
