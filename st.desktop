@@ -1,7 +1,11 @@
 [Desktop Entry]
-Type=Application
 Name=st
-Comment=Simple terminal emulator for X from suckless
-Icon=utilities-terminal
+GenericName=Terminal
+Comment=Simple terminal emulator for X
 Exec=st
-Categories=System;TerminalEmulator
+Terminal=false
+Type=Application
+Encoding=UTF-8
+Icon=utilities-terminal
+Categories=System;TerminalEmulator;
+Keywords=shell;prompt;command;command-line;suckless;
