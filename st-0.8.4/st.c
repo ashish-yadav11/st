@@ -2056,7 +2056,7 @@ savepwd(const char *src)
 	size_t slen;
 	struct stat buf;
 
-	if (lstat(src, &buf) == -1 || !S_ISDIR(buf.st_mode)) {
+	if (stat(src, &buf) == -1 || !S_ISDIR(buf.st_mode)) {
 		fprintf(stderr, "savepwd: %s is not a directory\n", src);
 		return;
 	}
