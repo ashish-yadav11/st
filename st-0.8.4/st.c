@@ -2598,12 +2598,6 @@ tresize(int col, int row)
 	minrow = MIN(row, term.row);
 	mincol = MIN(col, term.maxcol);
 
-	if (col < 1 || row < 1) {
-		fprintf(stderr,
-		        "tresize: error resizing to %dx%d\n", col, row);
-		return;
-	}
-
 	/*
 	 * slide screen to keep cursor where we expect it -
 	 * tscrollup would work here, but we can optimize to
