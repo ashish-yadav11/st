@@ -2077,7 +2077,7 @@ newterm(const Arg *arg)
 		break;
 	case 0:
 		if (pwd)
-			setenv("ST_NEWTERM_PWD", pwd, 1);
+			setenv("NEWTERM_PWD", pwd, 1);
 		execlp("st", "st", (char *)NULL);
 		break;
 	}
