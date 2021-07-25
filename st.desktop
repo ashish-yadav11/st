@@ -2,6 +2,7 @@
 Name=st
 GenericName=Terminal
 Comment=Simple terminal emulator for X
+TryExec=st
 Exec=st
 Terminal=false
 Type=Application
