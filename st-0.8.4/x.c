@@ -1592,8 +1592,7 @@ xseticontitle(char *p)
 
 	if (fixedtitle && p)
 		return;
-	else
-		p = opt_title;
+	DEFAULT(p, opt_title);
 
 	Xutf8TextListToTextProperty(xw.dpy, &p, 1, XUTF8StringStyle,
 			&prop);
@@ -1609,8 +1608,7 @@ xsettitle(char *p)
 
 	if (fixedtitle && p)
 		return;
-	else
-		p = opt_title;
+	DEFAULT(p, opt_title);
 
 	Xutf8TextListToTextProperty(xw.dpy, &p, 1, XUTF8StringStyle,
 			&prop);
