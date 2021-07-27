@@ -194,7 +194,7 @@ static void tputtab(int);
 static void tputc(Rune);
 static void treset(void);
 static void tscrollup(int, int, int);
-static void tscrolldown(int, int, int);
+static void tscrolldown(int, int);
 static void tsetattr(const int *, int);
 static void tsetchar(Rune, const Glyph *, int, int);
 static void tsetdirt(int, int);
@@ -215,7 +215,6 @@ static void drawregion(int, int, int, int);
 static void savepwd(const char *);
 
 static void selnormalize(void);
-static void selscroll(int, int);
 static void selsnap(int *, int *, int);
 
 static size_t utf8decode(const char *, Rune *, size_t);
@@ -427,11 +426,12 @@ int
 tlinelen(int y)
 {
 	int i = term.col;
+	Line line = TLINE(y);
 
-	if (TLINE(y)[i - 1].mode & ATTR_WRAP)
+	if (line[i - 1].mode & ATTR_WRAP)
 		return i;
 
-	while (i > 0 && TLINE(y)[i - 1].u == ' ')
+	while (i > 0 && line[i - 1].u == ' ')
 		--i;
 
 	return i;
@@ -615,19 +615,21 @@ getsel(void)
 
 	/* append every set & selected glyph to the selection */
 	for (y = sel.nb.y; y <= sel.ne.y; y++) {
+		Line line = TLINE(y);
+
 		if ((linelen = tlinelen(y)) == 0) {
 			*ptr++ = '\n';
 			continue;
 		}
 
 		if (sel.type == SEL_RECTANGULAR) {
-			gp = &TLINE(y)[sel.nb.x];
+			gp = &line[sel.nb.x];
 			lastx = sel.ne.x;
 		} else {
-			gp = &TLINE(y)[sel.nb.y == y ? sel.nb.x : 0];
+			gp = &line[sel.nb.y == y ? sel.nb.x : 0];
 			lastx = (sel.ne.y == y) ? sel.ne.x : term.col-1;
 		}
-		last = &TLINE(y)[MIN(lastx, linelen-1)];
+		last = &line[MIN(lastx, linelen-1)];
 		while (last >= gp && last->u == ' ')
 			--last;
 
@@ -862,9 +864,9 @@ void
 ttywrite(const char *s, size_t n, int may_echo)
 {
 	const char *next;
-	Arg arg = (Arg) { .i = term.scr };
 
-	kscrolldown(&arg);
+	if (term.scr)
+		kscrolldown(&((Arg){ .i = term.scr }));
 
 	if (may_echo && IS_SET(MODE_ECHO))
 		twrite(s, n, 1);
@@ -1086,17 +1088,24 @@ kscrolldown(const Arg* a)
 {
 	int n = a->i;
 
+	if (!term.scr)
+		return;
+
 	if (n < 0)
 		n = term.row + n;
 
-	if (n > term.scr)
+	if (n > term.scr) {
 		n = term.scr;
-
-	if (term.scr > 0) {
+		term.scr = 0;
+	} else
 		term.scr -= n;
-		selscroll(0, -n);
-		tfulldirt();
+
+	if (sel.ob.x != -1) {
+		sel.ob.y -= n;
+		sel.oe.y -= n;
+		selnormalize();
 	}
+	tfulldirt();
 }
 
 void
@@ -1107,27 +1116,27 @@ kscrollup(const Arg* a)
 	if (n < 0)
 		n = term.row + n;
 
-	if (term.scr <= HISTSIZE-n) {
+	if (n > HISTSIZE - term.scr) {
+		n = HISTSIZE - term.scr;
+		term.scr = HISTSIZE;
+	} else
 		term.scr += n;
-		selscroll(0, n);
-		tfulldirt();
+
+	if (sel.ob.x != -1) {
+		sel.ob.y += n;
+		sel.oe.y += n;
+		selnormalize();
 	}
+	tfulldirt();
 }
 
 void
-tscrolldown(int orig, int n, int copyhist)
+tscrolldown(int orig, int n)
 {
 	int i;
 	Line temp;
 
 	LIMIT(n, 0, term.bot-orig+1);
-
-	if (!IS_SET(MODE_ALTSCREEN) && copyhist) {
-		term.histi = (term.histi - 1 + HISTSIZE) % HISTSIZE;
-		temp = term.hist[term.histi];
-		term.hist[term.histi] = term.line[term.bot];
-		term.line[term.bot] = temp;
-	}
 
 	tsetdirt(orig, term.bot-n);
 	tclearregion(0, term.bot-n+1, term.col-1, term.bot);
@@ -1138,8 +1147,11 @@ tscrolldown(int orig, int n, int copyhist)
 		term.line[i-n] = temp;
 	}
 
-	if (term.scr == 0)
-		selscroll(orig, n);
+	if (term.scr == 0 && sel.ob.x != -1) {
+		sel.ob.y += n;
+		sel.oe.y += n;
+		selnormalize();
+	}
 }
 
 void
@@ -1150,12 +1162,13 @@ tscrollup(int orig, int n, int copyhist)
 
 	LIMIT(n, 0, term.bot-orig+1);
 
-	if (!IS_SET(MODE_ALTSCREEN) && copyhist) {
-		term.histi = (term.histi + 1) % HISTSIZE;
-		temp = term.hist[term.histi];
-		term.hist[term.histi] = term.line[orig];
-		term.line[orig] = temp;
-	}
+	if (!IS_SET(MODE_ALTSCREEN) /*&& orig == term.top */&& copyhist)
+		for (i = term.top; i < term.top+n; i++) {
+			term.histi = (term.histi + 1) % HISTSIZE;
+			temp = term.hist[term.histi];
+			term.hist[term.histi] = term.line[i];
+			term.line[i] = temp;
+		}
 
 	if (term.scr > 0 && term.scr < HISTSIZE)
 		term.scr = MIN(term.scr + n, HISTSIZE-1);
@@ -1169,27 +1182,10 @@ tscrollup(int orig, int n, int copyhist)
 		term.line[i+n] = temp;
 	}
 
-	if (term.scr == 0)
-		selscroll(orig, -n);
-}
-
-void
-selscroll(int orig, int n)
-{
-	if (sel.ob.x == -1)
-		return;
-
-	if (BETWEEN(sel.nb.y, orig, term.bot) != BETWEEN(sel.ne.y, orig, term.bot)) {
-		selclear();
-	} else if (BETWEEN(sel.nb.y, orig, term.bot)) {
-		sel.ob.y += n;
-		sel.oe.y += n;
-		if (sel.ob.y < term.top || sel.ob.y > term.bot ||
-		    sel.oe.y < term.top || sel.oe.y > term.bot) {
-			selclear();
-		} else {
-			selnormalize();
-		}
+	if (term.scr == 0 && sel.ob.x != -1) {
+		sel.ob.y -= n;
+		sel.oe.y -= n;
+		selnormalize();
 	}
 }
 
@@ -1364,7 +1360,7 @@ void
 tinsertblankline(int n)
 {
 	if (BETWEEN(term.c.y, term.top, term.bot))
-		tscrolldown(term.c.y, n, 0);
+		tscrolldown(term.c.y, n);
 }
 
 void
@@ -1812,7 +1808,7 @@ csihandle(void)
 		break;
 	case 'T': /* SD -- Scroll <n> line down */
 		DEFAULT(csiescseq.arg[0], 1);
-		tscrolldown(term.top, csiescseq.arg[0], 0);
+		tscrolldown(term.top, csiescseq.arg[0]);
 		break;
 	case 'L': /* IL -- Insert <n> blank lines */
 		DEFAULT(csiescseq.arg[0], 1);
@@ -2375,7 +2371,7 @@ eschandle(uchar ascii)
 		break;
 	case 'M': /* RI -- Reverse index */
 		if (term.c.y == term.top) {
-			tscrolldown(term.top, 1, 1);
+			tscrolldown(term.top, 1);
 		} else {
 			tmoveto(term.c.x, term.c.y-1);
 		}
