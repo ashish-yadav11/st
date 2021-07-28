@@ -1835,9 +1835,8 @@ csihandle(void)
 			if (IS_SET(MODE_ALTSCREEN)) {
 				tclearregion(0, 0, term.col-1, term.row-1);
 			} else {
-				int tmp = term.bot;
+				int tmp = term.bot; /* term.top doesn't matter */
 
-				kscrolldown(&((Arg){ .i = term.scr }));
 				term.bot = term.row - 1;
 				tscrollup(0, term.row, 1);
 				term.bot = tmp;
@@ -2671,7 +2670,7 @@ tresize(int col, int row)
 		tswapscreen(0);
 	/* for non-alt screen */
 	if (term.c.y >= row) {
-		term.bot = term.row - 1;
+		term.bot = term.row - 1; /* term.top doesn't matter */
 		tscrollup(0, term.c.y - row + 1, -1);
 	}
 	for (i = row; i < term.row; i++)
