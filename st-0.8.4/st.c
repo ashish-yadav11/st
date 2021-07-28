@@ -2666,8 +2666,11 @@ tresize(int col, int row)
 	*/
 
 	/* slide screen to keep cursor where we expect it */
-	if (alt)
+	if (alt) {
+		c = term.c;
 		tswapscreen(0);
+		tcursor(CURSOR_LOAD);
+	}
 	/* for non-alt screen */
 	if (term.c.y >= row) {
 		term.bot = term.row - 1; /* term.top doesn't matter */
@@ -2683,8 +2686,10 @@ tresize(int col, int row)
 		memmove(term.alt, term.alt + i, row * sizeof(Line));
 	for (i += row; i < term.row; i++)
 		free(term.alt[i]);
-	if (alt)
+	if (alt) {
 		tswapscreen(0);
+		term.c = c;
+	}
 
 	/* resize to new height */
 	term.line = xrealloc(term.line, row * sizeof(Line));
@@ -2734,14 +2739,13 @@ tresize(int col, int row)
 	/* Clearing both screens (tswapscreen makes dirty all lines) */
 	c = term.c;
 	for (i = 0; i < 2; i++) {
-		if (pmaxcol < col && 0 < minrow) {
+		if (pmaxcol < col && 0 < minrow)
 			tclearregion(pmaxcol, 0, col - 1, minrow - 1);
-		}
-		if (/*0 < col && */minrow < row) {
+		if (/*0 < col && */minrow < row)
 			tclearregion(0, minrow, col - 1, row - 1);
-		}
 		tswapscreen(1);
-		tcursor(CURSOR_LOAD);
+		if (i == 0)
+			tcursor(CURSOR_LOAD);
 	}
 	term.c = c;
 }
