@@ -75,6 +75,9 @@ static int bellvolume = 0;
 
 /* default TERM value */
 char *termname = "st-256color";
+/* default class and name hints */
+char *defaultclass = "simple-terminal";
+char *defaultname = "st";
 
 /*
  * spaces per tab
