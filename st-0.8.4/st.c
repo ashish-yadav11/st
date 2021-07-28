@@ -120,6 +120,7 @@ typedef struct {
 typedef struct {
 	int row;      /* nb row */
 	int col;      /* nb col */
+	int maxcol;
 	Line *line;   /* screen */
 	Line *alt;    /* alternate screen */
 	Line hist[HISTSIZE]; /* history buffer */
@@ -1075,14 +1076,14 @@ tnew(int col, int row)
 }
 
 void
-tswapscreen(int setdirty)
+tswapscreen(int setdirt)
 {
 	Line *tmp = term.line;
 
 	term.line = term.alt;
 	term.alt = tmp;
 	term.mode ^= MODE_ALTSCREEN;
-	if (setdirty)
+	if (setdirt)
 		tfulldirt();
 }
 
@@ -1167,7 +1168,7 @@ void
 tscrollup(int orig, int n, int mode)
 {
 	int i;
-	int m = 0;
+	int s = 0;
 	Line temp;
 
 	LIMIT(n, 0, term.bot-orig+1);
@@ -1183,10 +1184,10 @@ tscrollup(int orig, int n, int mode)
 		if (term.scr) {
 			if (n <= HISTSIZE - term.scr) {
 				term.scr += n;
-				m = -1;
+				s = -1; /* flag no sel scroll */
 			} else {
 				term.scr = HISTSIZE;
-				m = n - HISTSIZE - term.scr;
+				s = n - HISTSIZE + term.scr;
 			}
 		}
 	}
@@ -1202,12 +1203,12 @@ tscrollup(int orig, int n, int mode)
 		term.line[i+n] = temp;
 	}
 
-	if (!m) {
+	if (!s) {
 		selscroll(orig, -n);
-	} else if (m > 0 && sel.ob.x != -1) {
-		sel.ob.y -= m;
-		sel.oe.y -= m;
-		if (sel.oe.y <= -HISTSIZE || sel.ob.y <= -HISTSIZE)
+	} else if (s > 0 && sel.ob.x != -1) {
+		sel.ob.y -= s;
+		sel.oe.y -= s;
+		if (sel.oe.y < 0 || sel.ob.y < 0)
 			selclear();
 		else
 			selnormalize();
@@ -1352,12 +1353,14 @@ tclearregion(int x1, int y1, int x2, int y2)
 	LIMIT(x2, 0, term.col-1);
 	LIMIT(y1, 0, term.row-1);
 	LIMIT(y2, 0, term.row-1);
+	if (x2 == term.col-1)
+		x2 = term.maxcol-1;
 
 	for (y = y1; y <= y2; y++) {
 		term.dirty[y] = 1;
 		for (x = x1; x <= x2; x++) {
 			gp = &term.line[y][x];
-			if (selected(x, y))
+			if (selected(x + term.scr, y + term.scr))
 				selclear();
 			gp->fg = term.c.attr.fg;
 			gp->bg = term.c.attr.bg;
@@ -2641,10 +2644,19 @@ tresize(int col, int row)
 	int i, j;
 	int alt = IS_SET(MODE_ALTSCREEN);
 	int minrow = MIN(row, term.row);
-	int mincol = MIN(col, term.col);
+	int pmaxcol = term.maxcol;
 	int *bp;
 	Glyph *gp;
 	TCursor c;
+
+	term.maxcol = MAX(col, pmaxcol);
+
+	if (sel.mode != SEL_EMPTY && sel.ob.x != -1 &&
+	    ((sel.type == SEL_RECTANGULAR && sel.ne.x >= col) ||
+	     ((col < term.col && sel.ne.y != sel.nb.y) ||
+	      (sel.nb.x >= col || sel.ne.x >= col)))) {
+		selclear();
+	}
 
 	/* col and row are always MAX(_, 1)
 	if (col < 1 || row < 1) {
@@ -2682,8 +2694,8 @@ tresize(int col, int row)
 	term.tabs = xrealloc(term.tabs, col * sizeof(*term.tabs));
 
 	for (i = 0; i < HISTSIZE; i++) {
-		term.hist[i] = xrealloc(term.hist[i], col * sizeof(Glyph));
-		for (j = mincol; j < col; j++) {
+		term.hist[i] = xrealloc(term.hist[i], term.maxcol * sizeof(Glyph));
+		for (j = pmaxcol; j < term.maxcol; j++) {
 			gp = &term.hist[i][j];
 			gp->fg = term.c.attr.fg;
 			gp->bg = term.c.attr.bg;
@@ -2694,14 +2706,14 @@ tresize(int col, int row)
 
 	/* resize each row to new width, zero-pad if needed */
 	for (i = 0; i < minrow; i++) {
-		term.line[i] = xrealloc(term.line[i], col * sizeof(Glyph));
-		term.alt[i]  = xrealloc(term.alt[i],  col * sizeof(Glyph));
+		term.line[i] = xrealloc(term.line[i], term.maxcol * sizeof(Glyph));
+		term.alt[i]  = xrealloc(term.alt[i],  term.maxcol * sizeof(Glyph));
 	}
 
 	/* allocate any new rows */
 	for (/* i = minrow */; i < row; i++) {
-		term.line[i] = xmalloc(col * sizeof(Glyph));
-		term.alt[i] = xmalloc(col * sizeof(Glyph));
+		term.line[i] = xmalloc(term.maxcol * sizeof(Glyph));
+		term.alt[i] = xmalloc(term.maxcol * sizeof(Glyph));
 	}
 	if (col > term.col) {
 		bp = term.tabs + term.col;
@@ -2720,11 +2732,11 @@ tresize(int col, int row)
 	term.bot = row - 1;
 	/* make use of the LIMIT in tmoveto */
 	tmoveto(term.c.x, term.c.y);
-	/* Clearing both screens (it makes dirty all lines) */
+	/* Clearing both screens (tswapscreen makes dirty all lines) */
 	c = term.c;
 	for (i = 0; i < 2; i++) {
-		if (mincol < col && 0 < minrow) {
-			tclearregion(mincol, 0, col - 1, minrow - 1);
+		if (pmaxcol < col && 0 < minrow) {
+			tclearregion(pmaxcol, 0, col - 1, minrow - 1);
 		}
 		if (/*0 < col && */minrow < row) {
 			tclearregion(0, minrow, col - 1, row - 1);

@@ -1,7 +1,9 @@
-# bugs
+# todo
 
-* term.bot gets messed up when resizing (shrinking) veritcally
+* extract patch for better-scroll with column saving
+
+* extract patch for -T fixes title
 
 # features
 
-* text reflow on resizing
+* text reflow on resizing?
