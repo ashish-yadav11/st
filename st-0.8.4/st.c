@@ -1722,7 +1722,7 @@ void
 csihandle(void)
 {
 	char buf[40];
-	int len;
+	int n, tmp;
 
 	switch (csiescseq.mode[0]) {
 	default:
@@ -1835,10 +1835,19 @@ csihandle(void)
 			if (IS_SET(MODE_ALTSCREEN)) {
 				tclearregion(0, 0, term.col-1, term.row-1);
 			} else {
-				int tmp = term.bot; /* term.top doesn't matter */
-
+				tmp = term.bot; /* term.top doesn't matter */
 				term.bot = term.row - 1;
-				tscrollup(0, term.row, 1);
+
+				/* termite does this: */
+//				tscrollup(0, term.row, 1);
+
+				/* alacritty does this: */
+				for (n = term.bot; n >= 0 && tlinelen(n) == 0; n--);
+				tscrollup(0, n + 1, 1);
+				/* term.top is used in selscroll but the relevant lines
+				 * are going to be engulfed (selection will get cleared) */
+				tscrollup(0, term.row - n - 1, 0);
+
 				term.bot = tmp;
 			}
 			break;
@@ -1905,9 +1914,9 @@ csihandle(void)
 		break;
 	case 'n': /* DSR – Device Status Report (cursor position) */
 		if (csiescseq.arg[0] == 6) {
-			len = snprintf(buf, sizeof(buf), "\033[%i;%iR",
+			n = snprintf(buf, sizeof(buf), "\033[%i;%iR",
 					term.c.y+1, term.c.x+1);
-			ttywrite(buf, len, 0);
+			ttywrite(buf, n, 0);
 		}
 		break;
 	case 'r': /* DECSTBM -- Set Scrolling Region */
@@ -2657,13 +2666,12 @@ tresize(int col, int row)
 		selclear();
 	}
 
-	/* col and row are always MAX(_, 1)
-	if (col < 1 || row < 1) {
-		fprintf(stderr,
-		        "tresize: error resizing to %dx%d\n", col, row);
-		return;
-	}
-	*/
+	/* col and row are always MAX(_, 1) */
+//	if (col < 1 || row < 1) {
+//		fprintf(stderr,
+//		        "tresize: error resizing to %dx%d\n", col, row);
+//		return;
+//	}
 
 	/* slide screen to keep cursor where we expect it */
 	if (alt) {
