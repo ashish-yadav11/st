@@ -11,18 +11,18 @@ license=(MIT)
 depends=(libxft)
 provides=(st)
 conflicts=(st)
-source=("$_pkgname-$pkgver.tar.gz"
+source=("$_pkgname.tar.gz"
         "$_pkgname.desktop")
 sha256sums=(SKIP
             SKIP)
 
 build() {
-    cd "$srcdir/$_pkgname-$pkgver"
+    cd "$srcdir/$_pkgname"
     make
 }
 
 package() {
-    cd "$srcdir/$_pkgname-$pkgver"
+    cd "$srcdir/$_pkgname"
     make PREFIX=/usr DESTDIR="$pkgdir" install
     install -m644 -D LICENSE "$pkgdir/usr/share/doc/$_pkgname/LICENSE"
     install -m644 -D README "$pkgdir/usr/share/doc/$_pkgname/README"
