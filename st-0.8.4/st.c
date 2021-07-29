@@ -233,6 +233,7 @@ static ssize_t xwrite(int, const char *, size_t);
 /* Globals */
 static Term term;
 static Selection sel;
+static TCursor tcurbuf[2];
 static CSIEscape csiescseq;
 static STREscape strescseq;
 static int iofd = 1;
@@ -1020,14 +1021,13 @@ tfulldirt(void)
 void
 tcursor(int mode)
 {
-	static TCursor c[2];
 	int alt = IS_SET(MODE_ALTSCREEN);
 
 	if (mode == CURSOR_SAVE) {
-		c[alt] = term.c;
+		tcurbuf[alt] = term.c;
 	} else if (mode == CURSOR_LOAD) {
-		term.c = c[alt];
-		tmoveto(c[alt].x, c[alt].y);
+		term.c = tcurbuf[alt];
+		tmoveto(tcurbuf[alt].x, tcurbuf[alt].y);
 	}
 }
 
@@ -1836,8 +1836,8 @@ csihandle(void)
 				tmp = term.bot; /* term.top doesn't matter */
 				term.bot = term.row - 1;
 
-				/* termite does this: */
-//				tscrollup(0, term.row, 1);
+				/* termite does this:
+				tscrollup(0, term.row, 1); */
 
 				/* alacritty does this: */
 				for (n = term.bot; n >= 0 && tlinelen(n) == 0; n--);
@@ -2637,7 +2637,7 @@ twrite(const char *buf, int buflen, int show_ctrl)
 void
 tresize(int col, int row)
 {
-	int i, j;
+	int i, j, tmp;
 	int alt = IS_SET(MODE_ALTSCREEN);
 	int minrow = MIN(row, term.row);
 	int pmaxcol = term.maxcol;
@@ -2647,6 +2647,13 @@ tresize(int col, int row)
 
 	term.maxcol = MAX(col, pmaxcol);
 
+	/* col and row are always MAX(_, 1)
+	if (col < 1 || row < 1) {
+		fprintf(stderr,
+		        "tresize: error resizing to %dx%d\n", col, row);
+		return;
+	} */
+
 	if (sel.mode != SEL_EMPTY && sel.ob.x != -1 &&
 	    ((sel.type == SEL_RECTANGULAR && sel.ne.x >= col) ||
 	     ((col < term.col && sel.ne.y != sel.nb.y) ||
@@ -2654,36 +2661,48 @@ tresize(int col, int row)
 		selclear();
 	}
 
-	/* col and row are always MAX(_, 1) */
-//	if (col < 1 || row < 1) {
-//		fprintf(stderr,
-//		        "tresize: error resizing to %dx%d\n", col, row);
-//		return;
-//	}
-
-	/* slide screen to keep cursor where we expect it */
+	/* switch to non-alt screen if on alt screen */
 	if (alt) {
 		c = term.c;
 		tswapscreen(0);
-		tcursor(CURSOR_LOAD);
+		term.c = tcurbuf[0];
 	}
-	/* for non-alt screen */
-	if (term.c.y >= row) {
-		term.bot = term.row - 1; /* term.top doesn't matter */
-		tscrollup(0, term.c.y - row + 1, -1);
+	/* slide screen up to save content in history */
+	for (i = term.row - 1; i >= 0 && tlinelen(i) == 0; i--);
+	i = MAX(i, term.c.y);
+	if (i >= row) {
+		tmp = term.bot; /* term.top doesn't matter */
+		term.bot = term.row - 1;
+		tscrollup(0, i - row + 1, -1);
+		term.c.y += row - 1 - i;
+		term.bot = tmp;
 	}
 	for (i = row; i < term.row; i++)
 		free(term.line[i]);
-	/* for alt screen */
+	/* switch to the cursor of alt screen */
+	if (alt) {
+		tcurbuf[0] = term.c;
+		term.c = c;
+	} else {
+		c = term.c;
+		term.c = tcurbuf[1];
+	}
+	/* in case on alt screen, slide alt screen to keep cursor where we
+	 * expect it */
 	for (i = 0; i <= term.c.y - row; i++)
 		free(term.alt[i]);
 	/* ensure that both src and dst are not NULL */
-	if (i > 0)
+	if (i > 0) {
 		memmove(term.alt, term.alt + i, row * sizeof(Line));
+		term.c.y = row - 1;
+	}
 	for (i += row; i < term.row; i++)
 		free(term.alt[i]);
+	/* restore the screen that was active */
 	if (alt) {
 		tswapscreen(0);
+	} else {
+		tcurbuf[1] = term.c;
 		term.c = c;
 	}
 
@@ -2740,10 +2759,8 @@ tresize(int col, int row)
 		if (/*0 < col && */minrow < row)
 			tclearregion(0, minrow, col - 1, row - 1);
 		tswapscreen(1);
-		if (i == 0)
-			tcursor(CURSOR_LOAD);
+		term.c = (i == 0) ? tcurbuf[!alt] : c;
 	}
-	term.c = c;
 }
 
 void
