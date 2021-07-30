@@ -2637,7 +2637,7 @@ twrite(const char *buf, int buflen, int show_ctrl)
 void
 tresize(int col, int row)
 {
-	int i, j, tmp;
+	int i, j;
 	int alt = IS_SET(MODE_ALTSCREEN);
 	int minrow = MIN(row, term.row);
 	int pmaxcol = term.maxcol;
@@ -2665,15 +2665,14 @@ tresize(int col, int row)
 		tswapscreen(0);
 		term.c = tcurbuf[0];
 	}
-	/* slide screen up to save content in history */
-	for (i = term.row - 1; i >= 0 && tlinelen(i) == 0; i--);
-	i = MAX(i, term.c.y);
-	if (i >= row) {
-		tmp = term.bot; /* term.top doesn't matter */
+	/* slide screen up to keep cursor where we expect it */
+	/* use tscrollup for non-alt screen to save content in history */
+	if (term.c.y >= row) {
+		/* no need for restoring term.bot after tscrollup since its value
+		 * is immaterial now and term.top doesn't matter in tscrollup */
 		term.bot = term.row - 1;
-		tscrollup(0, i - row + 1, -1);
-		term.c.y += row - 1 - i;
-		term.bot = tmp;
+		tscrollup(0, term.c.y - row + 1, -1);
+		term.c.y = row - 1;
 	}
 	for (i = row; i < term.row; i++)
 		free(term.line[i]);
@@ -2685,8 +2684,7 @@ tresize(int col, int row)
 		c = term.c;
 		term.c = tcurbuf[1];
 	}
-	/* in case on alt screen, slide alt screen to keep cursor where we
-	 * expect it */
+	/* slide alt screen up */
 	for (i = 0; i <= term.c.y - row; i++)
 		free(term.alt[i]);
 	/* ensure that both src and dst are not NULL */
