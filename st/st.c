@@ -2645,14 +2645,14 @@ tresize(int col, int row)
 	Glyph *gp;
 	TCursor c;
 
-	term.maxcol = MAX(col, pmaxcol);
-
 	/* col and row are always MAX(_, 1)
 	if (col < 1 || row < 1) {
 		fprintf(stderr,
 		        "tresize: error resizing to %dx%d\n", col, row);
 		return;
 	} */
+
+	term.maxcol = MAX(col, pmaxcol);
 
 	if (sel.mode != SEL_EMPTY && sel.ob.x != -1 &&
 	    ((sel.type == SEL_RECTANGULAR && sel.ne.x >= col) ||
