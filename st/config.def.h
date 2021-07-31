@@ -200,18 +200,20 @@ static MouseShortcut mshortcuts[] = {
 static Shortcut shortcuts[] = {
 	/* mask                 keysym          function        argument */
 	{ XK_ANY_MOD,           XK_Break,       sendbreak,      {.i =  0} },
-	{ TERMMOD,              XK_Prior,       zoom,           {.f = +1} },
-	{ TERMMOD,              XK_Next,        zoom,           {.f = -1} },
-	{ TERMMOD,              XK_Home,        zoomreset,      {.f =  0} },
+	{ TERMMOD,              XK_plus,        zoom,           {.f = +1} },
+	{ TERMMOD,              XK_underscore,  zoom,           {.f = -1} },
+	{ TERMMOD,              XK_parenright,  zoomreset,      {.f =  0} },
 	{ TERMMOD,              XK_C,           clipcopy,       {.i =  0} },
 	{ TERMMOD,              XK_V,           clippaste,      {.i =  0} },
 	{ TERMMOD,              XK_Y,           selpaste,       {.i =  0} },
 	{ ShiftMask,            XK_Insert,      selpaste,       {.i =  0} },
 	{ TERMMOD,              XK_Num_Lock,    numlock,        {.i =  0} },
-	{ ShiftMask,            XK_Up,          kscrollup,      {.i = +1} },
-	{ ShiftMask,            XK_Down,        kscrolldown,    {.i = +1} },
-	{ ShiftMask,            XK_Page_Up,     kscrollup,      {.i = -1} },
-	{ ShiftMask,            XK_Page_Down,   kscrolldown,    {.i = -1} },
+	{ TERMMOD,              XK_J,           kscrolldown,    {.i = +1} },
+	{ TERMMOD,              XK_K,           kscrollup,      {.i = +1} },
+	{ TERMMOD,              XK_Up,          kscrollup,      {.i = +1} },
+	{ TERMMOD,              XK_Down,        kscrolldown,    {.i = +1} },
+	{ TERMMOD,              XK_Prior,       kscrollup,      {.i = -1} },
+	{ TERMMOD,              XK_Next,        kscrolldown,    {.i = -1} },
 	{ TERMMOD,              XK_T,           newterm,        {.i =  0} },
 };
 
