@@ -2712,8 +2712,8 @@ tresize(int col, int row)
 		term.hist[i] = xrealloc(term.hist[i], term.maxcol * sizeof(Glyph));
 		for (j = pmaxcol; j < term.maxcol; j++) {
 			gp = &term.hist[i][j];
-			gp->fg = term.c.attr.fg;
-			gp->bg = term.c.attr.bg;
+			gp->fg = defaultfg;
+			gp->bg = defaultbg;
 			gp->mode = 0;
 			gp->u = ' ';
 		}
