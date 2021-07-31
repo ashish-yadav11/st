@@ -1437,7 +1437,7 @@ xdrawglyphfontspecs(const XftGlyphFontSpec *specs, Glyph base, int len, int x, i
 
 	if (base.mode & ATTR_SELECTED) {
 		bg = &dc.col[selectionbg];
-		if (!ignoreselfg)
+		if (useselectionfg)
 			fg = &dc.col[selectionfg];
 	}
 
@@ -1507,7 +1507,7 @@ xdrawcursor(int cx, int cy, Glyph g, int ox, int oy, Glyph og)
 
 	/* remove the old cursor */
 	if (selected(ox, oy))
-		og.mode ^= ATTR_SELECTED;
+		og.mode |= ATTR_SELECTED;
 	xdrawglyph(og, ox, oy);
 
 	if (IS_SET(MODE_HIDE))
@@ -1637,7 +1637,7 @@ xdrawline(Line line, int x1, int y1, int x2)
 		if (new.mode == ATTR_WDUMMY)
 			continue;
 		if (selected(x, y1))
-			new.mode ^= ATTR_SELECTED;
+			new.mode |= ATTR_SELECTED;
 		if (i > 0 && ATTRCMP(base, new)) {
 			xdrawglyphfontspecs(specs, base, i, ox, y1);
 			specs += i;

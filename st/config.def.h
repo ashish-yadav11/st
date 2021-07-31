@@ -133,8 +133,8 @@ static unsigned int defaultcs = 258;
 static unsigned int defaultrcs = 256;
 static unsigned int selectionbg = 259;
 static unsigned int selectionfg = 257;
-/* Owerwrite selection foreground colours with selectionfg */
-static int ignoreselfg = 1;
+/* Owerwrite foreground colors of selected cells with selectionfg */
+static int useselectionfg = 0;
 
 /*
  * Default shape of cursor
