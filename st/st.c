@@ -1362,7 +1362,7 @@ tclearregion(int x1, int y1, int x2, int y2)
 				selclear();
 			gp->fg = term.c.attr.fg;
 			gp->bg = term.c.attr.bg;
-			gp->mode = 0;
+			gp->mode = ATTR_NULL;
 			gp->u = ' ';
 		}
 	}
@@ -2714,7 +2714,7 @@ tresize(int col, int row)
 			gp = &term.hist[i][j];
 			gp->fg = defaultfg;
 			gp->bg = defaultbg;
-			gp->mode = 0;
+			gp->mode = ATTR_NULL;
 			gp->u = ' ';
 		}
 	}
