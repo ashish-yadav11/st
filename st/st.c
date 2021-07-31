@@ -2655,8 +2655,8 @@ tresize(int col, int row)
 	term.maxcol = MAX(col, pmaxcol);
 
 	if (sel.mode != SEL_EMPTY && sel.ob.x != -1 &&
-	    ((sel.type == SEL_RECTANGULAR && sel.ne.x >= col) ||
-	     (sel.ne.y != sel.nb.y || sel.nb.x >= col || sel.ne.x >= col)))
+	    (sel.type == SEL_RECTANGULAR ? sel.ne.x >= col :
+	     sel.ne.y != sel.nb.y || sel.nb.x >= col || sel.ne.x >= col))
 		selclear();
 
 	/* switch to non-alt screen if on alt screen */
