@@ -174,7 +174,7 @@ static unsigned int defaultattr = 11;
  * Note that if you want to use ShiftMask with selmasks, set this to an other
  * modifier, set to 0 to not use it.
  */
-static uint forcemousemod = ShiftMask;
+static uint forcemousemod = ControlMask;
 
 /*
  * Internal mouse shortcuts.
@@ -475,7 +475,7 @@ static Key key[] = {
  * If no match is found, regular selection is used.
  */
 static uint selmasks[] = {
-	[SEL_RECTANGULAR] = Mod1Mask,
+	[SEL_RECTANGULAR] = ShiftMask,
 };
 
 /*
