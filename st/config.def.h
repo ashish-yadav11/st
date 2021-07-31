@@ -6,11 +6,6 @@
  * font: see http://freedesktop.org/software/fontconfig/fontconfig-user.html
  */
 static char *font = "Monospace:size=12";
-/* spare fonts */
-static char *sfonts[] = {
-	"Siji:pixelsize=12",
-	"Noto Color Emoji:pixelsize=12",
-};
 static int borderpx = 0;
 
 /*
