@@ -64,6 +64,9 @@ static void ttysend(const Arg *);
 /* config.h for applying patches and the configuration. */
 #include "config.h"
 
+/* size of title stack */
+#define TITLESTACKSIZE 8
+
 /* XEMBED messages */
 #define XEMBED_FOCUS_IN  4
 #define XEMBED_FOCUS_OUT 5
@@ -94,7 +97,7 @@ typedef struct {
 	Window win;
 	Drawable buf;
 	GlyphFontSpec *specbuf; /* font spec buffer used for rendering */
-	Atom xembed, wmdeletewin, netwmname, netwmiconname, netwmpid;
+	Atom xembed, wmdeletewin, netwmname, netwmpid;
 	struct {
 		XIM xim;
 		XIC xic;
@@ -116,6 +119,11 @@ typedef struct {
 	struct timespec tclick1;
 	struct timespec tclick2;
 } XSelection;
+
+typedef struct {
+	int i;
+	char *titles[TITLESTACKSIZE];
+} XTitleStack;
 
 /* Font structure */
 #define Font Font_
@@ -221,6 +229,7 @@ static void (*handler[LASTEvent])(XEvent *) = {
 static DC dc;
 static XWindow xw;
 static XSelection xsel;
+static XTitleStack tstack;
 static TermWindow win;
 
 /* Font Ring Cache */
@@ -1194,7 +1203,6 @@ xinit(int cols, int rows)
 	xw.xembed = XInternAtom(xw.dpy, "_XEMBED", False);
 	xw.wmdeletewin = XInternAtom(xw.dpy, "WM_DELETE_WINDOW", False);
 	xw.netwmname = XInternAtom(xw.dpy, "_NET_WM_NAME", False);
-	xw.netwmiconname = XInternAtom(xw.dpy, "_NET_WM_ICON_NAME", False);
 	XSetWMProtocols(xw.dpy, xw.win, &xw.wmdeletewin, 1);
 
 	xw.netwmpid = XInternAtom(xw.dpy, "_NET_WM_PID", False);
@@ -1585,29 +1593,42 @@ xsetenv(void)
 }
 
 void
-xseticontitle(char *p)
+xfreetitlestack(void)
+{
+	for (int i = 0; i < TITLESTACKSIZE; i++) {
+		free(tstack.titles[i]);
+		tstack.titles[i] = NULL;
+	}
+}
+
+void
+xsettitle(char *p, int pop)
 {
 	XTextProperty prop;
-	DEFAULT(p, opt_title);
 
-	Xutf8TextListToTextProperty(xw.dpy, &p, 1, XUTF8StringStyle,
-			&prop);
-	XSetWMIconName(xw.dpy, xw.win, &prop);
-	XSetTextProperty(xw.dpy, xw.win, &prop, xw.netwmiconname);
+	free(tstack.titles[tstack.i]);
+
+	if (pop) {
+		tstack.titles[tstack.i] = NULL;
+		tstack.i = (tstack.i - 1 + TITLESTACKSIZE) % TITLESTACKSIZE;
+		p = tstack.titles[tstack.i];
+	} else {
+		DEFAULT(p, opt_title);
+		tstack.titles[tstack.i] = strdup(p);
+	}
+
+	Xutf8TextListToTextProperty(xw.dpy, &p, 1, XUTF8StringStyle, &prop);
+	XSetWMName(xw.dpy, xw.win, &prop);
+	XSetTextProperty(xw.dpy, xw.win, &prop, xw.netwmname);
 	XFree(prop.value);
 }
 
 void
-xsettitle(char *p)
+xpushtitle(void)
 {
-	XTextProperty prop;
-	DEFAULT(p, opt_title);
-
-	Xutf8TextListToTextProperty(xw.dpy, &p, 1, XUTF8StringStyle,
-			&prop);
-	XSetWMName(xw.dpy, xw.win, &prop);
-	XSetTextProperty(xw.dpy, xw.win, &prop, xw.netwmname);
-	XFree(prop.value);
+	tstack.i = (tstack.i + 1) % TITLESTACKSIZE;
+	free(tstack.titles[tstack.i]);
+	tstack.titles[tstack.i] = NULL;
 }
 
 int
