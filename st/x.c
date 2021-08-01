@@ -222,7 +222,6 @@ static DC dc;
 static XWindow xw;
 static XSelection xsel;
 static TermWindow win;
-static int fixedtitle = 0;
 
 /* Font Ring Cache */
 enum {
@@ -1589,9 +1588,6 @@ void
 xseticontitle(char *p)
 {
 	XTextProperty prop;
-
-	if (fixedtitle && p)
-		return;
 	DEFAULT(p, opt_title);
 
 	Xutf8TextListToTextProperty(xw.dpy, &p, 1, XUTF8StringStyle,
@@ -1605,9 +1601,6 @@ void
 xsettitle(char *p)
 {
 	XTextProperty prop;
-
-	if (fixedtitle && p)
-		return;
 	DEFAULT(p, opt_title);
 
 	Xutf8TextListToTextProperty(xw.dpy, &p, 1, XUTF8StringStyle,
@@ -2000,12 +1993,12 @@ usage(void)
 {
 	die("usage: %s [-aiv] [-c class] [-f font] [-g geometry]"
 	    " [-n name] [-o file]\n"
-	    "          [-T fixed-title] [-t title] [-w windowid]"
+	    "          [-T title] [-t title] [-w windowid]"
 	    " [[-e] command [args ...]]\n"
 	    "       %s [-aiv] [-c class] [-f font] [-g geometry]"
 	    " [-n name] [-o file]\n"
-	    "          [-T fixed-title] [-t title] [-w windowid]"
-	    " -l line [stty_args ...]\n", argv0, argv0);
+	    "          [-T title] [-t title] [-w windowid] -l line"
+	    " [stty_args ...]\n", argv0, argv0);
 }
 
 int
@@ -2047,7 +2040,6 @@ main(int argc, char *argv[])
 		break;
 	case 't':
 	case 'T':
-		fixedtitle = 1;
 		opt_title = EARGF(usage());
 		break;
 	case 'w':
