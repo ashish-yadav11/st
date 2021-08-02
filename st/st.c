@@ -2672,9 +2672,8 @@ rscrolldown(int n)
 	if (IS_SET(MODE_ALTSCREEN))
 		return; */
 
-	if (n <= 0)
+	if ((n = MIN(n, term.histf)) <= 0)
 		return;
-	n = MIN(n, term.histf);
 
 	for (i = term.c.y + n; i >= n; i--) {
 		temp = term.line[i];
