@@ -2801,17 +2801,17 @@ tresize(int col, int row)
 	/* reset scrolling region */
 	term.top = 0;
 	term.bot = row - 1;
-	/* follow the behaviour of xterm */
-	rscrolldown(term.row - minrow);
-	/* make use of the LIMIT in tmoveto */
-	tmoveto(term.c.x, term.c.y);
 
 	/* clear non-alt screen */
-	tfulldirt(); /* dirty all lines of non-alt screen */
 	if (pmaxcol < col && 0 < minrow)
 		tclearregion(pmaxcol, 0, col - 1, minrow - 1, 0);
 	if (/*0 < col && */minrow < row)
 		tclearregion(0, minrow, col - 1, row - 1, 0);
+	/* follow behaviour of xterm, scroll as much as height has increased */
+	rscrolldown(term.row - minrow);
+	tfulldirt(); /* make all lines dirty */
+	tmoveto(term.c.x, term.c.y); /* make use of the LIMIT in tmoveto */
+
 	/* clear alt screen */
 	tswapscreen(1);	/* also makes dirty all lines of alt screen */
 	if (mincol < col && 0 < minrow)
@@ -2820,11 +2820,10 @@ tresize(int col, int row)
 		tclearregion(0, minrow, col - 1, row - 1, 0);
 
 	if (alt) {
-		term.c = c;
-		/* make use of the LIMIT in tmoveto */
-		tmoveto(term.c.x, term.c.y);
+		term.c = c; /* restore alt screen cursor */
+		tmoveto(term.c.x, term.c.y); /* make use of the LIMIT in tmoveto */
 	} else
-		tswapscreen(0);
+		tswapscreen(0); /* restore non-alt screen */
 }
 
 void
