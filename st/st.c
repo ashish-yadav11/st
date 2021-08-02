@@ -2689,7 +2689,7 @@ rscrolldown(int n)
 	}
 	term.histf -= n;
 	term.scr = MAX(term.scr - n, 0);
-	tmoveto(term.c.x, term.c.y + n);
+	term.c.y += n;
 	if (sel.ob.x != -1) {
 		sel.ob.y += n;
 		sel.oe.y += n;
@@ -2803,7 +2803,9 @@ tresize(int col, int row)
 	term.top = 0;
 	term.bot = row - 1;
 	/* follow the behaviour of xterm */
-	rscrolldown(term.row - minrow); /* also fixes cursor with tmoveto */
+	rscrolldown(term.row - minrow);
+	/* make use of the LIMIT in tmoveto */
+	tmoveto(term.c.x, term.c.y);
 
 	/* clear non-alt screen */
 	tfulldirt(); /* dirty all lines of non-alt screen */
