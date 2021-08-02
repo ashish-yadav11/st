@@ -2820,6 +2820,7 @@ tresize(int col, int row)
 		tclearregion(0, minrow, col - 1, row - 1, 0);
 
 	if (alt) {
+		tcurbuf[0] = term.c; /* save non-alt screen cursor */
 		term.c = c; /* restore alt screen cursor */
 		tmoveto(term.c.x, term.c.y); /* make use of the LIMIT in tmoveto */
 	} else
