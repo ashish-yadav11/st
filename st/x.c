@@ -1614,7 +1614,7 @@ xsettitle(char *p, int pop)
 		p = tstack.titles[tstack.i];
 	} else {
 		DEFAULT(p, opt_title);
-		tstack.titles[tstack.i] = strdup(p);
+		tstack.titles[tstack.i] = xstrdup(p);
 	}
 
 	Xutf8TextListToTextProperty(xw.dpy, &p, 1, XUTF8StringStyle, &prop);
