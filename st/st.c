@@ -1061,6 +1061,7 @@ treset(void)
 	term.top = 0;
 	term.bot = term.row - 1;
 	term.histf = 0;
+	term.scr = 0;
 	term.mode = MODE_WRAP|MODE_UTF8;
 	memset(term.trantbl, CS_USA, sizeof(term.trantbl));
 	term.charset = 0;
