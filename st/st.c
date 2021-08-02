@@ -1093,6 +1093,7 @@ tswapscreen(int setdirt)
 {
 	Line *tmp = term.line;
 
+	term.scr = 0; /* only required if switching to alt screen */
 	term.line = term.alt;
 	term.alt = tmp;
 	term.mode ^= MODE_ALTSCREEN;
@@ -1671,8 +1672,6 @@ tsetmode(int priv, int set, const int *args, int narg)
 				alt = IS_SET(MODE_ALTSCREEN);
 				if (alt) {
 					tclearregion(0, 0, term.col-1, term.row-1, 1);
-				} else {
-					kscrolldown(&((Arg){ .i = term.scr }));
 				}
 				if (set ^ alt) /* set is always 1 or 0 */
 					tswapscreen(1);
