@@ -35,7 +35,7 @@
 #define ESC_ARG_SIZ   16
 #define STR_BUF_SIZ   ESC_BUF_SIZ
 #define STR_ARG_SIZ   ESC_ARG_SIZ
-#define HISTSIZE      10000
+#define HISTSIZE      2000
 
 /* macros */
 #define IS_SET(flag)		((term.mode & (flag)) != 0)
@@ -48,6 +48,18 @@
 	(y) < term.scr ? term.hist[(term.histi + (y) - term.scr + 1 + HISTSIZE) % HISTSIZE] \
 	               : term.line[(y) - term.scr] \
 )
+
+#define CLEARGLYPH(gp, usecurattr) do { \
+	if (usecurattr) { \
+		gp->fg = term.c.attr.fg; \
+		gp->bg = term.c.attr.bg; \
+	} else { \
+		gp->fg = defaultfg; \
+		gp->bg = defaultbg; \
+	} \
+	gp->mode = ATTR_NULL; \
+	gp->u = ' '; \
+} while (0)
 
 enum term_mode {
 	MODE_WRAP        = 1 << 0,
@@ -195,6 +207,7 @@ static void tnewline(int);
 static void tputtab(int);
 static void tputc(Rune);
 static void treset(void);
+static void rscrolldown(int);
 static void tscrollup(int, int, int);
 static void tscrolldown(int, int);
 static void tsetattr(const int *, int);
@@ -1352,7 +1365,7 @@ tclearregion(int x1, int y1, int x2, int y2, int usecurattr)
 	LIMIT(x2, 0, term.col-1);
 	LIMIT(y1, 0, term.row-1);
 	LIMIT(y2, 0, term.row-1);
-	if (x2 == term.col-1)
+	if (!IS_SET(MODE_ALTSCREEN) && x2 == term.col-1)
 		x2 = term.maxcol-1;
 
 	for (y = y1; y <= y2; y++) {
@@ -1361,15 +1374,7 @@ tclearregion(int x1, int y1, int x2, int y2, int usecurattr)
 			gp = &term.line[y][x];
 			if (selected(x + term.scr, y + term.scr))
 				selclear();
-			if (usecurattr) {
-				gp->fg = term.c.attr.fg;
-				gp->bg = term.c.attr.bg;
-			} else {
-				gp->fg = defaultfg;
-				gp->bg = defaultbg;
-			}
-			gp->mode = ATTR_NULL;
-			gp->u = ' ';
+			CLEARGLYPH(gp, usecurattr);
 		}
 	}
 }
@@ -2658,11 +2663,46 @@ twrite(const char *buf, int buflen, int show_ctrl)
 }
 
 void
+rscrolldown(int n)
+{
+	int i;
+	Line temp;
+
+	/* can never be true
+	if (IS_SET(MODE_ALTSCREEN))
+		return; */
+
+	if (n <= 0)
+		return;
+	n = MIN(n, term.histf);
+
+	for (i = term.c.y + n; i >= n; i--) {
+		temp = term.line[i];
+		term.line[i] = term.line[i-n];
+		term.line[i-n] = temp;
+	}
+	for (/* i = n - 1 */; i >= 0; i--) {
+		temp = term.line[i];
+		term.line[i] = term.hist[term.histi];
+		term.hist[term.histi] = temp;
+		term.histi = (term.histi - 1 + HISTSIZE) % HISTSIZE;
+	}
+	term.histf -= n;
+	term.scr = MAX(term.scr - n, 0);
+	tmoveto(term.c.x, term.c.y + n);
+	if (sel.ob.x != -1) {
+		sel.ob.y += n;
+		sel.oe.y += n;
+	}
+}
+
+void
 tresize(int col, int row)
 {
 	int i, j;
-	int alt = IS_SET(MODE_ALTSCREEN);
+	int alt = IS_SET(MODE_ALTSCREEN), *altcy;
 	int minrow = MIN(row, term.row);
+	int mincol = MIN(col, term.col);
 	int pmaxcol = term.maxcol;
 	int *bp;
 	Glyph *gp;
@@ -2677,6 +2717,7 @@ tresize(int col, int row)
 
 	term.maxcol = MAX(col, pmaxcol);
 
+	/* selection */
 	if (sel.mode != SEL_EMPTY && sel.ob.x != -1 &&
 	    (sel.type == SEL_RECTANGULAR ? sel.ne.x >= col :
 	     sel.ne.y != sel.nb.y || sel.nb.x >= col || sel.ne.x >= col))
@@ -2687,71 +2728,64 @@ tresize(int col, int row)
 		c = term.c;
 		tswapscreen(0);
 		term.c = tcurbuf[0];
+		/* tcurbuf could be holding a corrupt y value */
+		term.c.y = MIN(term.c.y, term.row - 1);
 	}
-	/* slide screen up to keep cursor where we expect it */
-	/* use tscrollup for non-alt screen to save content in history */
+	/* slide screen up if otherwise cursor would get out of the screen */
 	if (term.c.y >= row) {
-		/* no need for restoring term.bot after tscrollup since its value
-		 * is immaterial now and term.top doesn't matter in tscrollup */
+		/* term.top doesn't matter in tscrollup and no need for
+		 * restoring term.bot since its value is immaterial now */
 		term.bot = term.row - 1;
 		tscrollup(0, term.c.y - row + 1, -1);
 		term.c.y = row - 1;
 	}
 	for (i = row; i < term.row; i++)
 		free(term.line[i]);
-	/* switch to the cursor of alt screen */
+
+	/* get pointer to y coordinate of the non-alt screen cursor */
 	if (alt) {
-		tcurbuf[0] = term.c;
-		term.c = c;
+		altcy = &c.y;
 	} else {
-		c = term.c;
-		term.c = tcurbuf[1];
+		altcy = &tcurbuf[1].y;
+		/* tcurbuf could be holding a corrupt y value */
+		*altcy = MIN(*altcy, term.row - 1);
 	}
 	/* slide alt screen up */
-	for (i = 0; i <= term.c.y - row; i++)
+	for (i = 0; i <= *altcy - row; i++)
 		free(term.alt[i]);
 	/* ensure that both src and dst are not NULL */
 	if (i > 0) {
 		memmove(term.alt, term.alt + i, row * sizeof(Line));
-		term.c.y = row - 1;
+		*altcy = row - 1;
 	}
 	for (i += row; i < term.row; i++)
 		free(term.alt[i]);
-	/* restore the screen that was active */
-	if (alt) {
-		tswapscreen(0);
-	} else {
-		tcurbuf[1] = term.c;
-		term.c = c;
-	}
 
 	/* resize to new height */
 	term.line = xrealloc(term.line, row * sizeof(Line));
-	term.alt  = xrealloc(term.alt,  row * sizeof(Line));
+	term.alt = xrealloc(term.alt, row * sizeof(Line));
 	term.dirty = xrealloc(term.dirty, row * sizeof(*term.dirty));
 	term.tabs = xrealloc(term.tabs, col * sizeof(*term.tabs));
 
+	/* resize rows of history buffer to new width, clear extra cells */
 	for (i = 0; i < HISTSIZE; i++) {
 		term.hist[i] = xrealloc(term.hist[i], term.maxcol * sizeof(Glyph));
 		for (j = pmaxcol; j < term.maxcol; j++) {
 			gp = &term.hist[i][j];
-			gp->fg = defaultfg;
-			gp->bg = defaultbg;
-			gp->mode = ATTR_NULL;
-			gp->u = ' ';
+			CLEARGLYPH(gp, 0);
 		}
 	}
 
-	/* resize each row to new width, zero-pad if needed */
+	/* resize each row to new width */
 	for (i = 0; i < minrow; i++) {
 		term.line[i] = xrealloc(term.line[i], term.maxcol * sizeof(Glyph));
-		term.alt[i]  = xrealloc(term.alt[i],  term.maxcol * sizeof(Glyph));
+		term.alt[i] = xrealloc(term.alt[i], col * sizeof(Glyph));
 	}
 
 	/* allocate any new rows */
 	for (/* i = minrow */; i < row; i++) {
 		term.line[i] = xmalloc(term.maxcol * sizeof(Glyph));
-		term.alt[i] = xmalloc(term.maxcol * sizeof(Glyph));
+		term.alt[i] = xmalloc(col * sizeof(Glyph));
 	}
 	if (col > term.col) {
 		bp = term.tabs + term.col;
@@ -2768,16 +2802,28 @@ tresize(int col, int row)
 	/* reset scrolling region */
 	term.top = 0;
 	term.bot = row - 1;
-	/* make use of the LIMIT in tmoveto */
-	tmoveto(term.c.x, term.c.y);
-	/* Clearing both screens (tswapscreen makes dirty all lines) */
-	for (i = 0; i < 2; i++) {
-		if (pmaxcol < col && 0 < minrow)
-			tclearregion(pmaxcol, 0, col - 1, minrow - 1, 0);
-		if (/*0 < col && */minrow < row)
-			tclearregion(0, minrow, col - 1, row - 1, 0);
-		tswapscreen(1);
-	}
+	/* follow the behaviour of xterm */
+	rscrolldown(term.row - minrow); /* also fixes cursor with tmoveto */
+
+	/* clear non-alt screen */
+	tfulldirt(); /* dirty all lines of non-alt screen */
+	if (pmaxcol < col && 0 < minrow)
+		tclearregion(pmaxcol, 0, col - 1, minrow - 1, 0);
+	if (/*0 < col && */minrow < row)
+		tclearregion(0, minrow, col - 1, row - 1, 0);
+	/* clear alt screen */
+	tswapscreen(1);	/* also makes dirty all lines of alt screen */
+	if (mincol < col && 0 < minrow)
+		tclearregion(mincol, 0, col - 1, minrow - 1, 0);
+	if (/*0 < col && */minrow < row)
+		tclearregion(0, minrow, col - 1, row - 1, 0);
+
+	if (alt) {
+		term.c = c;
+		/* make use of the LIMIT in tmoveto */
+		tmoveto(term.c.x, term.c.y);
+	} else
+		tswapscreen(0);
 }
 
 void
