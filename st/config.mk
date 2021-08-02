@@ -2,7 +2,9 @@
 VERSION = 0.8.4
 
 # cflags
-CFLAGS = -Wall -O3
+CFLAGS = -Wall -Og
+#CFLAGS = -Wall -Wextra -Wno-unused-parameter -Og
+#CFLAGS = -Wall -O3
 #CFLAGS = -Wall -Wextra -Wno-unused-parameter -O3
 
 # Customize below to fit your system
