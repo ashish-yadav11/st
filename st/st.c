@@ -2464,8 +2464,10 @@ eschandle(uchar ascii)
 		break;
 	case 'c': /* RIS -- Reset to initial state */
 		treset();
-		xfreetitlestack();
-		resettitle();
+		if (resettitleonris) {
+			xfreetitlestack();
+			resettitle();
+		}
 		xloadcols();
 		break;
 	case '=': /* DECPAM -- Application keypad */

@@ -43,6 +43,9 @@ int allowaltscreen = 1;
    setting the clipboard text */
 int allowwindowops = 0;
 
+/* reset title too on 'ESC c' (RIS) escape code */
+int resettitleonris = 0;
+
 /*
  * draw latency range in ms - from new content/keypress/etc until drawing.
  * within this range, st draws when content stops arriving (idle). mostly it's
