@@ -1621,9 +1621,11 @@ xsettitle(char *p, int pop)
 void
 xpushtitle(void)
 {
-	tstki = (tstki + 1) % TITLESTACKSIZE;
-	free(titlestack[tstki]);
-	titlestack[tstki] = NULL;
+	int tstkin = (tstki + 1) % TITLESTACKSIZE;
+
+	free(titlestack[tstkin]);
+	titlestack[tstkin] = xstrdup(titlestack[tstki]);
+	tstki = tstkin;
 }
 
 int
