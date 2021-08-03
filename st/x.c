@@ -120,11 +120,6 @@ typedef struct {
 	struct timespec tclick2;
 } XSelection;
 
-typedef struct {
-	int i;
-	char *titles[TITLESTACKSIZE];
-} XTitleStack;
-
 /* Font structure */
 #define Font Font_
 typedef struct {
@@ -229,8 +224,9 @@ static void (*handler[LASTEvent])(XEvent *) = {
 static DC dc;
 static XWindow xw;
 static XSelection xsel;
-static XTitleStack tstack;
 static TermWindow win;
+static int tstki; /* title stack index */
+static char *titlestack[TITLESTACKSIZE]; /* title stack */
 
 /* Font Ring Cache */
 enum {
@@ -1595,9 +1591,9 @@ xsetenv(void)
 void
 xfreetitlestack(void)
 {
-	for (int i = 0; i < TITLESTACKSIZE; i++) {
-		free(tstack.titles[i]);
-		tstack.titles[i] = NULL;
+	for (int i = 0; i < LEN(titlestack); i++) {
+		free(titlestack[i]);
+		titlestack[i] = NULL;
 	}
 }
 
@@ -1606,15 +1602,14 @@ xsettitle(char *p, int pop)
 {
 	XTextProperty prop;
 
-	free(tstack.titles[tstack.i]);
-
+	free(titlestack[tstki]);
 	if (pop) {
-		tstack.titles[tstack.i] = NULL;
-		tstack.i = (tstack.i - 1 + TITLESTACKSIZE) % TITLESTACKSIZE;
-		p = tstack.titles[tstack.i];
+		titlestack[tstki] = NULL;
+		tstki = (tstki - 1 + TITLESTACKSIZE) % TITLESTACKSIZE;
+		p = titlestack[tstki] ? titlestack[tstki] : opt_title;
 	} else {
 		DEFAULT(p, opt_title);
-		tstack.titles[tstack.i] = xstrdup(p);
+		titlestack[tstki] = xstrdup(p);
 	}
 
 	Xutf8TextListToTextProperty(xw.dpy, &p, 1, XUTF8StringStyle, &prop);
@@ -1626,9 +1621,9 @@ xsettitle(char *p, int pop)
 void
 xpushtitle(void)
 {
-	tstack.i = (tstack.i + 1) % TITLESTACKSIZE;
-	free(tstack.titles[tstack.i]);
-	tstack.titles[tstack.i] = NULL;
+	tstki = (tstki + 1) % TITLESTACKSIZE;
+	free(titlestack[tstki]);
+	titlestack[tstki] = NULL;
 }
 
 int
