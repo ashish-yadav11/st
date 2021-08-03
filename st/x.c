@@ -1607,9 +1607,11 @@ xsettitle(char *p, int pop)
 		titlestack[tstki] = NULL;
 		tstki = (tstki - 1 + TITLESTACKSIZE) % TITLESTACKSIZE;
 		p = titlestack[tstki] ? titlestack[tstki] : opt_title;
-	} else {
-		DEFAULT(p, opt_title);
+	} else if (p) {
 		titlestack[tstki] = xstrdup(p);
+	} else {
+		titlestack[tstki] = NULL;
+		p = opt_title;
 	}
 
 	Xutf8TextListToTextProperty(xw.dpy, &p, 1, XUTF8StringStyle, &prop);
@@ -1624,7 +1626,7 @@ xpushtitle(void)
 	int tstkin = (tstki + 1) % TITLESTACKSIZE;
 
 	free(titlestack[tstkin]);
-	titlestack[tstkin] = xstrdup(titlestack[tstki]);
+	titlestack[tstkin] = titlestack[tstki] ? xstrdup(titlestack[tstki]) : NULL;
 	tstki = tstkin;
 }
 
