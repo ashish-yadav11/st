@@ -1157,7 +1157,7 @@ kscrollup(const Arg* a)
 	if (n < 0)
 		n = MAX(term.row / -n, 1);
 
-	if (n <= term.histf - term.scr) {
+	if (term.scr + n <= term.histf) {
 		term.scr += n;
 	} else {
 		term.scr = term.histf;
@@ -1215,7 +1215,7 @@ tscrollup(int orig, int n, int mode)
 		}
 		term.histf = MIN(term.histf + n, HISTSIZE);
 		if (term.scr) {
-			if (n <= HISTSIZE - term.scr) {
+			if (term.scr + n <= HISTSIZE) {
 				term.scr += n;
 				s = -1; /* flag no sel scroll */
 			} else {
