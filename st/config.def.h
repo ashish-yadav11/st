@@ -194,7 +194,7 @@ static MouseShortcut mshortcuts[] = {
 };
 
 /* Internal keyboard shortcuts. */
-#define MODKEY Mod1Mask
+#define ALTMOD (Mod1Mask|ShiftMask)
 #define TERMMOD (ControlMask|ShiftMask)
 
 static Shortcut shortcuts[] = {
@@ -214,16 +214,16 @@ static Shortcut shortcuts[] = {
 	{ TERMMOD,              XK_Next,        kscrolldown,    {.i = -1} },
 	{ TERMMOD,              XK_J,           kscrolldown,    {.i = +1} },
 	{ TERMMOD,              XK_K,           kscrollup,      {.i = +1} },
-	{ MODKEY,               XK_j,           kscrolldown,    {.i = +1} },
-	{ MODKEY,               XK_k,           kscrollup,      {.i = +1} },
+	{ ALTMOD,               XK_J,           kscrolldown,    {.i = +1} },
+	{ ALTMOD,               XK_K,           kscrollup,      {.i = +1} },
 	{ TERMMOD,              XK_B,           kscrollup,      {.i = -1} },
 	{ TERMMOD,              XK_F,           kscrolldown,    {.i = -1} },
-	{ MODKEY|ShiftMask,     XK_B,           kscrollup,      {.i = -1} },
-	{ MODKEY|ShiftMask,     XK_F,           kscrolldown,    {.i = -1} },
+	{ ALTMOD,               XK_B,           kscrollup,      {.i = -1} },
+	{ ALTMOD,               XK_F,           kscrolldown,    {.i = -1} },
 	{ TERMMOD,              XK_D,           kscrolldown,    {.i = -2} },
 	{ TERMMOD,              XK_U,           kscrollup,      {.i = -2} },
-	{ MODKEY|ShiftMask,     XK_D,           kscrolldown,    {.i = -2} },
-	{ MODKEY|ShiftMask,     XK_U,           kscrollup,      {.i = -2} },
+	{ ALTMOD,               XK_D,           kscrolldown,    {.i = -2} },
+	{ ALTMOD,               XK_U,           kscrollup,      {.i = -2} },
 	{ TERMMOD,              XK_T,           newterm,        {.i =  0} },
 };
 
