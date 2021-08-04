@@ -235,6 +235,8 @@ static void savepwd(const char *);
 static void setpwd(void);
 
 static void selnormalize(void);
+static void selmove(int);
+static void selremove(void);
 static void selscroll(int, int);
 static void selsnap(int *, int *, int);
 
@@ -537,7 +539,7 @@ int
 selected(int x, int y)
 {
 	if (sel.mode == SEL_EMPTY || sel.ob.x == -1 ||
-			sel.alt != IS_SET(MODE_ALTSCREEN))
+	    sel.alt != IS_SET(MODE_ALTSCREEN))
 		return 0;
 
 	if (sel.type == SEL_RECTANGULAR)
@@ -680,12 +682,18 @@ getsel(void)
 }
 
 void
+selremove(void)
+{
+	sel.mode = SEL_IDLE;
+	sel.ob.x = -1;
+}
+
+void
 selclear(void)
 {
 	if (sel.ob.x == -1)
 		return;
-	sel.mode = SEL_IDLE;
-	sel.ob.x = -1;
+	selremove();
 	tsetdirt(sel.nb.y, sel.ne.y);
 }
 
@@ -1112,7 +1120,6 @@ tswapscreen(int setdirt)
 {
 	Line *tmp = term.line;
 
-	term.scr = 0; /* only required if switching to alt screen */
 	term.line = term.alt;
 	term.alt = tmp;
 	term.mode ^= MODE_ALTSCREEN;
@@ -1138,11 +1145,8 @@ kscrolldown(const Arg* a)
 		term.scr = 0;
 	}
 
-	if (sel.ob.x != -1) {
-		sel.ob.y -= n;
-		sel.oe.y -= n;
-		selnormalize();
-	}
+	if (sel.ob.x != -1)
+		selmove(-n); /* negate change in term.scr */
 	tfulldirt();
 }
 
@@ -1164,11 +1168,8 @@ kscrollup(const Arg* a)
 		term.scr = term.histf;
 	}
 
-	if (sel.ob.x != -1) {
-		sel.ob.y += n;
-		sel.oe.y += n;
-		selnormalize();
-	}
+	if (sel.ob.x != -1)
+		selmove(n); /* negate change in term.scr */
 	tfulldirt();
 }
 
@@ -1214,10 +1215,11 @@ tscrollup(int orig, int n, int mode)
 			term.line[i] = temp;
 		}
 		term.histf = MIN(term.histf + n, HISTSIZE);
+		s = n;
 		if (term.scr) {
 			if (term.scr + n <= HISTSIZE) {
-				term.scr += n;
 				s = -1; /* flag no sel scroll */
+				term.scr += n;
 			} else {
 				s = term.scr + n - HISTSIZE;
 				term.scr = HISTSIZE;
@@ -1239,13 +1241,17 @@ tscrollup(int orig, int n, int mode)
 	if (!s) {
 		selscroll(orig, -n);
 	} else if (s > 0 && sel.ob.x != -1) {
-		sel.ob.y -= s;
-		sel.oe.y -= s;
-		if (sel.oe.y < 0 || sel.ob.y < 0)
-			selclear();
-		else
-			selnormalize();
+		selmove(-s);
+		if (term.scr && sel.nb.y < 0)
+			selremove();
 	};
+}
+
+void
+selmove(int n)
+{
+	sel.ob.y += n, sel.nb.y += n;
+	sel.oe.y += n, sel.ne.y += n;
 }
 
 void
@@ -1257,14 +1263,9 @@ selscroll(int orig, int n)
 	if (BETWEEN(sel.nb.y, orig, term.bot) != BETWEEN(sel.ne.y, orig, term.bot)) {
 		selclear();
 	} else if (BETWEEN(sel.nb.y, orig, term.bot)) {
-		sel.ob.y += n;
-		sel.oe.y += n;
-		if (sel.ob.y < term.top || sel.ob.y > term.bot ||
-		    sel.oe.y < term.top || sel.oe.y > term.bot) {
+		selmove(n);
+		if (sel.nb.y < term.top || sel.ne.y > term.bot)
 			selclear();
-		} else {
-			selnormalize();
-		}
 	}
 }
 
@@ -1393,8 +1394,8 @@ tclearregion(int x1, int y1, int x2, int y2, int usecurattr)
 		term.dirty[y] = 1;
 		for (x = x1; x <= x2; x++) {
 			gp = &term.line[y][x];
-			if (selected(x + term.scr, y + term.scr))
-				selclear();
+			if (selected(x, y))
+				selremove();
 			CLEARGLYPH(gp, usecurattr);
 		}
 	}
@@ -1692,8 +1693,11 @@ tsetmode(int priv, int set, const int *args, int narg)
 				if (alt) {
 					tclearregion(0, 0, term.col-1, term.row-1, 1);
 				}
-				if (set ^ alt) /* set is always 1 or 0 */
+				if (set ^ alt) { /* set is always 1 or 0 */
+					if (!alt)
+						term.scr = 0;
 					tswapscreen(1);
+				}
 				if (*args != 1049)
 					break;
 				/* FALLTHROUGH */
@@ -2736,12 +2740,14 @@ rscrolldown(int n)
 		term.hist[term.histi] = temp;
 		term.histi = (term.histi - 1 + HISTSIZE) % HISTSIZE;
 	}
-	term.histf -= n;
-	term.scr = MAX(term.scr - n, 0);
 	term.c.y += n;
-	if (sel.ob.x != -1) {
-		sel.ob.y += n;
-		sel.oe.y += n;
+	term.histf -= n;
+	if ((i = term.scr - n) >= 0) {
+		term.scr = i;
+	} else {
+		term.scr = 0;
+		if (sel.ob.x != -1)
+			selmove(-i);
 	}
 }
 
@@ -2770,7 +2776,7 @@ tresize(int col, int row)
 	if (sel.mode != SEL_EMPTY && sel.ob.x != -1 &&
 	    (sel.type == SEL_RECTANGULAR ? sel.ne.x >= col :
 	     sel.ne.y != sel.nb.y || sel.nb.x >= col || sel.ne.x >= col))
-		selclear();
+		selremove();
 
 	/* switch to non-alt screen if on alt screen */
 	if (alt) {
