@@ -501,9 +501,10 @@ selextend(int col, int row, int type, int done)
 	sel.type = type;
 	selnormalize();
 
-	if (oldey != sel.oe.y || oldex != sel.oe.x || oldtype != sel.type || sel.mode == SEL_EMPTY)
+	if (oldey != sel.oe.y || oldex != sel.oe.x ||
+	    oldtype != sel.type || sel.mode == SEL_EMPTY) {
 		tsetdirt(MIN(sel.nb.y, oldsby), MAX(sel.ne.y, oldsey));
-
+	}
 	sel.mode = done ? SEL_IDLE : SEL_READY;
 }
 
@@ -538,7 +539,7 @@ selnormalize(void)
 int
 selected(int x, int y)
 {
-	if (sel.mode == SEL_EMPTY || sel.ob.x == -1 ||
+	if (sel.ob.x == -1 || sel.mode == SEL_EMPTY ||
 	    sel.alt != IS_SET(MODE_ALTSCREEN))
 		return 0;
 
@@ -2773,7 +2774,7 @@ tresize(int col, int row)
 	term.maxcol = MAX(col, pmaxcol);
 
 	/* selection */
-	if (sel.mode != SEL_EMPTY && sel.ob.x != -1 &&
+	if (sel.ob.x != -1 && sel.mode != SEL_EMPTY && col != term.col &&
 	    (sel.type == SEL_RECTANGULAR ? sel.ne.x >= col :
 	     sel.ne.y != sel.nb.y || sel.nb.x >= col || sel.ne.x >= col))
 		selremove();
