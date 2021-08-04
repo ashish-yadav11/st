@@ -1134,8 +1134,8 @@ kscrolldown(const Arg* a)
 	if (n <= term.scr) {
 		term.scr -= n;
 	} else {
-		term.scr = 0;
 		n = term.scr;
+		term.scr = 0;
 	}
 
 	if (sel.ob.x != -1) {
@@ -1160,8 +1160,8 @@ kscrollup(const Arg* a)
 	if (term.scr + n <= term.histf) {
 		term.scr += n;
 	} else {
-		term.scr = term.histf;
 		n = term.histf - term.scr;
+		term.scr = term.histf;
 	}
 
 	if (sel.ob.x != -1) {
@@ -1219,8 +1219,8 @@ tscrollup(int orig, int n, int mode)
 				term.scr += n;
 				s = -1; /* flag no sel scroll */
 			} else {
+				s = term.scr + n - HISTSIZE;
 				term.scr = HISTSIZE;
-				s = n - HISTSIZE + term.scr;
 			}
 		}
 	}
