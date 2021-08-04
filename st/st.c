@@ -1151,7 +1151,7 @@ kscrollup(const Arg* a)
 {
 	int n = a->i;
 
-	if (IS_SET(MODE_ALTSCREEN) || !term.histf)
+	if (!term.histf || IS_SET(MODE_ALTSCREEN))
 		return;
 
 	if (n < 0)
