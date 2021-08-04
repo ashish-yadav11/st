@@ -218,12 +218,12 @@ static Shortcut shortcuts[] = {
 	{ MODKEY,               XK_k,           kscrollup,      {.i = +1} },
 	{ TERMMOD,              XK_B,           kscrollup,      {.i = -1} },
 	{ TERMMOD,              XK_F,           kscrolldown,    {.i = -1} },
-	{ MODKEY,               XK_b,           kscrollup,      {.i = -1} },
-	{ MODKEY,               XK_f,           kscrolldown,    {.i = -1} },
+	{ MODKEY|ShiftMask,     XK_B,           kscrollup,      {.i = -1} },
+	{ MODKEY|ShiftMask,     XK_F,           kscrolldown,    {.i = -1} },
 	{ TERMMOD,              XK_D,           kscrolldown,    {.i = -2} },
 	{ TERMMOD,              XK_U,           kscrollup,      {.i = -2} },
-	{ MODKEY,               XK_d,           kscrolldown,    {.i = -2} },
-	{ MODKEY,               XK_u,           kscrollup,      {.i = -2} },
+	{ MODKEY|ShiftMask,     XK_D,           kscrolldown,    {.i = -2} },
+	{ MODKEY|ShiftMask,     XK_U,           kscrollup,      {.i = -2} },
 	{ TERMMOD,              XK_T,           newterm,        {.i =  0} },
 };
 
