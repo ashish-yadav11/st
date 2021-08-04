@@ -753,26 +753,28 @@ execsh(char *cmd, char **args)
 void
 sigchld(int a)
 {
-	int stat;
+	int stat, tmp;
 	pid_t p;
 
+	tmp = errno; /* waitpid might change errno */
 
+	while ((p = waitpid(-1, NULL, WNOHANG)) > 0)
+		if (p == pid)
+			goto check;
+
+	errno = tmp;
 
 	if ((p = waitpid(pid, &stat, WNOHANG)) < 0)
 		die("waiting for pid %hd failed: %s\n", pid, strerror(errno));
 
-	if (pid != p) {
-		int tmp = errno; /* waitpid might change errno */
-
-		while (waitpid(-1, NULL, WNOHANG) > 0);
-		errno = tmp;
+	if (pid != p)
 		return;
-	}
-
-	if (WIFEXITED(stat) && WEXITSTATUS(stat))
+check:
+	if (WIFEXITED(stat) && WEXITSTATUS(stat)) {
 		die("child exited with status %d\n", WEXITSTATUS(stat));
-	else if (WIFSIGNALED(stat))
+	} else if (WIFSIGNALED(stat)) {
 		die("child terminated due to signal %d\n", WTERMSIG(stat));
+	}
 	_exit(0);
 }
 
