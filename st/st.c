@@ -417,10 +417,10 @@ base64dec(const char *src)
 		in_len += 4 - (in_len % 4);
 	result = dst = xmalloc(in_len / 4 * 3 + 1);
 	while (*src) {
-		int a = base64_digits[(unsigned char) base64dec_getc(&src)];
-		int b = base64_digits[(unsigned char) base64dec_getc(&src)];
-		int c = base64_digits[(unsigned char) base64dec_getc(&src)];
-		int d = base64_digits[(unsigned char) base64dec_getc(&src)];
+		int a = base64_digits[(uchar) base64dec_getc(&src)];
+		int b = base64_digits[(uchar) base64dec_getc(&src)];
+		int c = base64_digits[(uchar) base64dec_getc(&src)];
+		int d = base64_digits[(uchar) base64dec_getc(&src)];
 
 		/* invalid input. 'a' can be -1, e.g. if src is "\n" (c-str) */
 		if (a == -1 || b == -1)
