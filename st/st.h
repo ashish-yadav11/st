@@ -37,6 +37,13 @@ enum glyph_attribute {
 	ATTR_BOLD_FAINT = ATTR_BOLD | ATTR_FAINT,
 };
 
+enum glyph_state {
+	GLYPH_EMPTY,
+	GLYPH_SET,
+	GLYPH_TAB,
+	GLYPH_TDUMMY,
+};
+
 enum selection_mode {
 	SEL_IDLE = 0,
 	SEL_EMPTY = 1,
@@ -64,6 +71,7 @@ typedef uint_least32_t Rune;
 typedef struct {
 	Rune u;           /* character code */
 	ushort mode;      /* attribute flags */
+	ushort state;     /* state flags */
 	uint32_t fg;      /* foreground  */
 	uint32_t bg;      /* background  */
 } Glyph;

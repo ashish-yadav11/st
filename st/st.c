@@ -62,6 +62,7 @@
 		gp->bg = defaultbg; \
 	} \
 	gp->mode = ATTR_NULL; \
+	gp->state = GLYPH_EMPTY; \
 	gp->u = ' '; \
 } while (0)
 
@@ -204,11 +205,13 @@ static void tdeletechar(int);
 static void tdeleteline(int);
 static void tinsertblank(int);
 static void tinsertblankline(int);
-static int tlinelen(int);
+static int tlinelen(Line line);
+static char *tgetline(char *, const Glyph *, const Glyph *, int);
 static void tmoveto(int, int);
 static void tmoveato(int, int);
 static void tnewline(int);
 static void tputtab(int);
+static void twritetab(void);
 static void tputc(Rune);
 static void treset(void);
 static void rscrolldown(int);
@@ -447,18 +450,28 @@ selinit(void)
 }
 
 int
-tlinelen(int y)
+tlinelen(Line line)
 {
-	int i = term.col;
-	Line line = TLINE(y);
+	int i = term.col - 1;
 
-	if (line[i - 1].mode & ATTR_WRAP)
-		return i;
-
-	while (i > 0 && line[i - 1].u == ' ')
+	while (i >= 0 && line[i].state == GLYPH_EMPTY)
 		--i;
+	return i + 1;
+}
 
-	return i;
+char *
+tgetline(char *buf, const Glyph *gp, const Glyph *last, int gettab)
+{
+	while (gp <= last)
+		if (gp->mode & ATTR_WDUMMY) {
+			gp++;
+		} else if (gettab && gp->state == GLYPH_TAB) {
+			*(buf++) = '\t';
+			while (++gp <= last && gp->state == GLYPH_TDUMMY);
+		} else {
+			buf += utf8encode((gp++)->u, buf);
+		}
+        return buf;
 }
 
 void
@@ -512,6 +525,7 @@ void
 selnormalize(void)
 {
 	int i;
+	Line line;
 
 	if (sel.type == SEL_REGULAR && sel.ob.y != sel.oe.y) {
 		sel.nb.x = sel.ob.y < sel.oe.y ? sel.ob.x : sel.oe.x;
@@ -526,13 +540,22 @@ selnormalize(void)
 	selsnap(&sel.nb.x, &sel.nb.y, -1);
 	selsnap(&sel.ne.x, &sel.ne.y, +1);
 
-	/* expand selection over line breaks */
 	if (sel.type == SEL_RECTANGULAR)
 		return;
-	i = tlinelen(sel.nb.y);
+
+	/* expand selection over line breaks and tabs */
+	line = TLINE(sel.nb.y);
+	if (line[sel.nb.x].state >= GLYPH_TAB) /* GLYPH_TAB or GLYPH_TDUMMY */
+		while (sel.nb.x > 0 && line[--sel.nb.x].state == GLYPH_TDUMMY);
+	i = tlinelen(line);
 	if (i < sel.nb.x)
 		sel.nb.x = i;
-	if (tlinelen(sel.ne.y) <= sel.ne.x)
+
+	line = TLINE(sel.ne.y);
+	i = tlinelen(line) - 1;
+	if (line[sel.ne.x].state >= GLYPH_TAB) /* GLYPH_TAB or GLYPH_TDUMMY */
+		while (sel.nb.x < i && line[++sel.nb.x].state == GLYPH_TDUMMY);
+	if (i < sel.ne.x)
 		sel.ne.x = term.col - 1;
 }
 
@@ -558,6 +581,7 @@ selsnap(int *x, int *y, int direction)
 	int newx, newy, xt, yt;
 	int delim, prevdelim;
 	const Glyph *gp, *prevgp;
+	Line line;
 
 	switch (sel.snap) {
 	case SNAP_WORD:
@@ -584,13 +608,15 @@ selsnap(int *x, int *y, int direction)
 					break;
 			}
 
-			if (newx >= tlinelen(newy))
+			if (newx >= tlinelen(TLINE(newy)))
 				break;
 
 			gp = &TLINE(newy)[newx];
 			delim = ISDELIM(gp->u);
-			if (!(gp->mode & ATTR_WDUMMY) && (delim != prevdelim
-					|| (delim && gp->u != prevgp->u)))
+			if (!(gp->mode & ATTR_WDUMMY) && (delim != prevdelim ||
+				(delim && (gp->u != prevgp->u ||
+					((gp->state >= GLYPH_TAB) !=
+					 (prevgp->state >= GLYPH_TAB))))))
 				break;
 
 			*x = newx;
@@ -607,18 +633,16 @@ selsnap(int *x, int *y, int direction)
 		 */
 		*x = (direction < 0) ? 0 : term.col - 1;
 		if (direction < 0) {
-			for (; *y > 0; *y += direction) {
-				if (!(TLINE(*y-1)[term.col-1].mode
-						& ATTR_WRAP)) {
+			for (; *y > 0; *y -= 1) {
+				line = TLINE(*y - 1);
+				if (!(line[tlinelen(line)].mode & ATTR_WRAP))
 					break;
-				}
 			}
 		} else if (direction > 0) {
-			for (; *y < term.row-1; *y += direction) {
-				if (!(TLINE(*y)[term.col-1].mode
-						& ATTR_WRAP)) {
+			for (; *y < term.row-1; *y += 1) {
+				line = TLINE(*y);
+				if (!(line[tlinelen(line)].mode & ATTR_WRAP))
 					break;
-				}
 			}
 		}
 		break;
@@ -642,7 +666,7 @@ getsel(void)
 	for (y = sel.nb.y; y <= sel.ne.y; y++) {
 		Line line = TLINE(y);
 
-		if ((linelen = tlinelen(y)) == 0) {
+		if ((linelen = tlinelen(line)) == 0) {
 			*ptr++ = '\n';
 			continue;
 		}
@@ -655,16 +679,8 @@ getsel(void)
 			lastx = (sel.ne.y == y) ? sel.ne.x : term.col-1;
 		}
 		last = &line[MIN(lastx, linelen-1)];
-		while (last >= gp && last->u == ' ')
-			--last;
 
-		for ( ; gp <= last; ++gp) {
-			if (gp->mode & ATTR_WDUMMY)
-				continue;
-
-			ptr += utf8encode(gp->u, ptr);
-		}
-
+		ptr = tgetline(ptr, gp, last, sel.type != SEL_RECTANGULAR);
 		/*
 		 * Copy and pasting of line endings is inconsistent
 		 * in the inconsistent terminal and GUI world.
@@ -678,7 +694,7 @@ getsel(void)
 		    (!(last->mode & ATTR_WRAP) || sel.type == SEL_RECTANGULAR))
 			*ptr++ = '\n';
 	}
-	*ptr = 0;
+	*ptr = '\0';
 	return str;
 }
 
@@ -1271,7 +1287,7 @@ selscroll(int orig, int n)
 }
 
 void
-tnewline(int first_col)
+tnewline(int firstcol)
 {
 	int y = term.c.y;
 
@@ -1280,7 +1296,7 @@ tnewline(int first_col)
 	} else {
 		y++;
 	}
-	tmoveto(first_col ? 0 : term.c.x, y);
+	tmoveto(firstcol ? 0 : term.c.x, y);
 }
 
 void
@@ -1371,6 +1387,7 @@ tsetchar(Rune u, const Glyph *attr, int x, int y)
 	term.dirty[y] = 1;
 	term.line[y][x] = *attr;
 	term.line[y][x].u = u;
+	term.line[y][x].state = GLYPH_SET;
 }
 
 void
@@ -1873,7 +1890,7 @@ csihandle(void)
 				tscrollup(0, term.row, 1); */
 
 				/* alacritty does this: */
-				for (n = term.bot; n >= 0 && tlinelen(n) == 0; n--);
+				for (n = term.bot; n && tlinelen(term.line[n]) == 0; n--);
 				tscrollup(0, n + 1, 1);
 				/* term.top is used in selscroll but the relevant lines
 				 * are going to be engulfed (selection will get cleared) */
@@ -2264,16 +2281,21 @@ tdumpsel(void)
 void
 tdumpline(int n)
 {
-	char buf[UTF_SIZ];
-	const Glyph *bp, *end;
+	char *str, *ptr;
+	const Glyph *gp, *last;
 
-	bp = &term.line[n][0];
-	end = &bp[MIN(tlinelen(n), term.col) - 1];
-	if (bp != end || bp->u != ' ') {
-		for ( ; bp <= end; ++bp)
-			tprinter(buf, utf8encode(bp->u, buf));
-	}
-	tprinter("\n", 1);
+	ptr = str = xmalloc((term.col+1) * UTF_SIZ);
+	gp = &term.line[n][0];
+	last = gp + term.col - 1;
+	while (last > gp && last->state == GLYPH_EMPTY)
+		last--;
+
+	ptr = tgetline(ptr, gp, last, 1);
+	if (!(last->mode & ATTR_WRAP))
+		*(ptr++) = '\n';
+
+	tprinter(str, ptr-str);
+	free(str);
 }
 
 void
@@ -2300,6 +2322,22 @@ tputtab(int n)
 				/* nothing */ ;
 	}
 	term.c.x = LIMIT(x, 0, term.col-1);
+}
+
+void
+twritetab(void)
+{
+	int x = term.c.x;
+
+	term.line[term.c.y][x].u = ' ';
+	term.line[term.c.y][x].state = GLYPH_TAB;
+
+	while (++x < term.col && !term.tabs[x]) {
+		term.line[term.c.y][x].u = ' ';
+		term.line[term.c.y][x].state = GLYPH_TDUMMY;
+	}
+
+	term.c.x = MIN(x, term.col-1);
 }
 
 void
@@ -2365,7 +2403,7 @@ tcontrolcode(uchar ascii)
 {
 	switch (ascii) {
 	case '\t':   /* HT */
-		tputtab(1);
+		twritetab();
 		return;
 	case '\b':   /* BS */
 		tmoveto(term.c.x-1, term.c.y);
