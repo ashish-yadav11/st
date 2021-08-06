@@ -471,7 +471,7 @@ tgetline(char *buf, const Glyph *gp, const Glyph *last, int gettab)
 		} else {
 			buf += utf8encode((gp++)->u, buf);
 		}
-        return buf;
+	return buf;
 }
 
 void
