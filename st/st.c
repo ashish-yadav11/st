@@ -546,18 +546,22 @@ selnormalize(void)
 
 	/* expand selection over line breaks and tabs */
 	line = TLINE(sel.nb.y);
-	if (line[sel.nb.x].state >= GLYPH_TAB) /* GLYPH_TAB or GLYPH_TDUMMY */
-		while (sel.nb.x > 0 && line[--sel.nb.x].state == GLYPH_TDUMMY);
 	i = tlinelen(line);
 	if (i < sel.nb.x)
 		sel.nb.x = i;
+	while (sel.nb.x > 0 && line[sel.nb.x].state == GLYPH_TDUMMY)
+		if (line[sel.nb.x-1].state >= GLYPH_TAB)
+			sel.nb.x--;
 
 	line = TLINE(sel.ne.y);
 	i = tlinelen(line) - 1;
-	if (line[sel.ne.x].state >= GLYPH_TAB) /* GLYPH_TAB or GLYPH_TDUMMY */
-		while (sel.nb.x < i && line[++sel.nb.x].state == GLYPH_TDUMMY);
-	if (i < sel.ne.x)
+	if (i < sel.ne.x) {
 		sel.ne.x = term.col - 1;
+		return;
+	}
+	if (line[sel.ne.x].state >= GLYPH_TAB)
+		while (sel.ne.x < i && line[sel.ne.x+1].state == GLYPH_TDUMMY)
+			sel.ne.x++;
 }
 
 int
@@ -1881,22 +1885,22 @@ csihandle(void)
 		case 2: /* all */
 			if (IS_SET(MODE_ALTSCREEN)) {
 				tclearregion(0, 0, term.col-1, term.row-1, 1);
-			} else {
-				tmp = term.bot; /* term.top doesn't matter */
-				term.bot = term.row - 1;
-
-				/* termite does this:
-				tscrollup(0, term.row, 1); */
-
-				/* alacritty does this: */
-				for (n = term.bot; n && tlinelen(term.line[n]) == 0; n--);
-				tscrollup(0, n + 1, 1);
-				/* term.top is used in selscroll but the relevant lines
-				 * are going to be engulfed (selection will get cleared) */
-				tscrollup(0, term.row - n - 1, 0);
-
-				term.bot = tmp;
+				break;
 			}
+			tmp = term.bot; /* term.top doesn't matter */
+			term.bot = term.row - 1;
+
+			/* termite does this:
+			tscrollup(0, term.row, 1); */
+
+			/* alacritty does this: */
+			for (n = term.bot; n > 0 && tlinelen(term.line[n]) == 0; n--);
+			tscrollup(0, n + 1, 1);
+			/* term.top is used in selscroll but the relevant lines
+			 * are going to be engulfed (selection will get cleared) */
+			tscrollup(0, term.row - n - 1, 0);
+
+			term.bot = tmp;
 			break;
 		default:
 			goto unknown;
