@@ -53,7 +53,7 @@ int resettitleonris = 0;
  * low minlatency will tear/flicker more, as it can "detect" idle too early.
  */
 static double minlatency = 15;
-static double maxlatency = 40;
+static double maxlatency = 50;
 
 /*
  * blinking timeout (set to 0 to disable blinking) for the terminal blinking
