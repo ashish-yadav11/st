@@ -89,7 +89,7 @@ typedef union {
 typedef struct {
 	const int histlines;
 	char *const *cmd;
-} EPArg;
+} ExternalPipe;
 
 void die(const char *, ...);
 void redraw(void);

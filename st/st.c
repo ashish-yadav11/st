@@ -799,13 +799,13 @@ void
 externalpipe(const Arg *arg)
 {
 	int fd[2];
-	int y, maxy;
+	int y, m;
 	int alt = IS_SET(MODE_ALTSCREEN);
 	char str[((alt ? term.col : term.maxcol) + 1) * UTF_SIZ];
 	char *ptr;
-	const EPArg *eparg = arg->v;
-	Glyph *gp, *last;
 	void (*psigpipe)(int);
+	Glyph *gp, *last;
+	const ExternalPipe *ep = arg->v;
 
 	if (pipe(fd) == -1)
 		die("pipe failed: %s\n", strerror(errno));
@@ -820,7 +820,7 @@ externalpipe(const Arg *arg)
 				die("dup2 failed: %s\n", strerror(errno));
 		}
 		close(fd[0]);
-		execvp(eparg->cmd[0], eparg->cmd);
+		execvp(ep->cmd[0], ep->cmd);
 		fprintf(stderr, "execvp %s failed: %s\n",
 				((char **)arg->v)[0], strerror(errno));
 		_exit(1);
@@ -830,11 +830,10 @@ externalpipe(const Arg *arg)
 	/* ignore sigpipe for now (in case child exits early) */
 	psigpipe = signal(SIGPIPE, SIG_IGN);
 
-	for (maxy = term.row - 1; maxy >= 0 &&
-			tlinelenmax(term.line[maxy]) == 0; maxy--);
-	y = alt ? 0 : ((eparg->histlines >= 0) ?
-			-MIN(eparg->histlines, term.histf) : -term.histf);
-	for (; y <= maxy; y++) {
+	y = alt ? 0 : (ep->histlines >= 0) ? -MIN(ep->histlines, term.histf) :
+                                             -term.histf;
+	for (m = term.row - 1; m >= 0 && tlinelenmax(term.line[m]) == 0; m--);
+	for (; y <= m; y++) {
 		gp = &TLINEABS(y)[0];
 		last = gp + (alt ? term.col : term.maxcol) - 1;
 		while (last > gp && last->state == GLYPH_EMPTY)

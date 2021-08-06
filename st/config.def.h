@@ -193,13 +193,14 @@ static MouseShortcut mshortcuts[] = {
 	{ XK_ANY_MOD,           Button5, ttysend,        {.s = "\005"} },
 };
 
-/* Internal keyboard shortcuts. */
+#define SCRIPTCMD(...) (char *const[]){ "/home/ashish/.scripts/st/"__VA_ARGS__, NULL }
 
-static EPArg pager = { .histlines = -1, .cmd = (char *[]){ "/media/storage/.temporary/st/pager.sh", NULL } };
+static ExternalPipe pager = { .histlines = -1, .cmd = SCRIPTCMD("pager.sh") };
 
 #define ALTMOD (Mod1Mask|ShiftMask)
 #define TERMMOD (ControlMask|ShiftMask)
 
+/* Internal keyboard shortcuts. */
 static Shortcut shortcuts[] = {
 	/* mask                 keysym          function        argument */
 	{ XK_ANY_MOD,           XK_Break,       sendbreak,      {.i =  0} },
