@@ -859,7 +859,7 @@ sigchld(int a)
 
 	tmp = errno; /* waitpid might change errno */
 
-	while ((p = waitpid(-1, NULL, WNOHANG)) > 0)
+	while ((p = waitpid(-1, &stat, WNOHANG)) > 0)
 		if (p == pid)
 			goto check;
 

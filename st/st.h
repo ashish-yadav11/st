@@ -87,8 +87,8 @@ typedef union {
 } Arg;
 
 typedef struct {
-        const int histlines;
-        char *const *cmd;
+	const int histlines;
+	char *const *cmd;
 } EPArg;
 
 void die(const char *, ...);

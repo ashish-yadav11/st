@@ -202,7 +202,6 @@ static EPArg pager = { .histlines = -1, .cmd = (char *[]){ "/media/storage/.temp
 
 static Shortcut shortcuts[] = {
 	/* mask                 keysym          function        argument */
-        { TERMMOD,              XK_P,           externalpipe,   {.v = &pager} },
 	{ XK_ANY_MOD,           XK_Break,       sendbreak,      {.i =  0} },
 	{ TERMMOD,              XK_plus,        zoom,           {.f = +1} },
 	{ TERMMOD,              XK_underscore,  zoom,           {.f = -1} },
@@ -229,6 +228,7 @@ static Shortcut shortcuts[] = {
 	{ ALTMOD,               XK_D,           kscrolldown,    {.i = -2} },
 	{ ALTMOD,               XK_U,           kscrollup,      {.i = -2} },
 	{ TERMMOD,              XK_T,           newterm,        {.i =  0} },
+	{ TERMMOD,              XK_P,           externalpipe,   {.v = &pager} },
 };
 
 /*
