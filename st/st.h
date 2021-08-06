@@ -86,10 +86,16 @@ typedef union {
 	const char *s;
 } Arg;
 
+typedef struct {
+        const int histlines;
+        char *const *cmd;
+} EPArg;
+
 void die(const char *, ...);
 void redraw(void);
 void draw(void);
 
+void externalpipe(const Arg *);
 void kscrolldown(const Arg *);
 void kscrollup(const Arg *);
 void newterm(const Arg *);

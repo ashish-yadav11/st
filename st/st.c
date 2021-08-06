@@ -54,6 +54,10 @@
 	               : term.line[(y) - term.scr] \
 )
 
+#define TLINEABS(y) ( \
+	(y) < 0 ? term.hist[(term.histi + (y) + 1 + HISTSIZE) % HISTSIZE] : term.line[(y)] \
+)
+
 #define CLEARGLYPH(gp, usecurattr) do { \
 	if (usecurattr) { \
 		gp->fg = term.c.attr.fg; \
@@ -206,7 +210,8 @@ static void tdeletechar(int);
 static void tdeleteline(int);
 static void tinsertblank(int);
 static void tinsertblankline(int);
-static int tlinelen(Line line);
+static int tlinelen(Line);
+static int tlinelenmax(Line);
 static char *tgetline(char *, const Glyph *, const Glyph *, int);
 static void tmoveto(int, int);
 static void tmoveato(int, int);
@@ -460,6 +465,16 @@ tlinelen(Line line)
 	return i + 1;
 }
 
+int
+tlinelenmax(Line line)
+{
+	int i = (IS_SET(MODE_ALTSCREEN) ? term.col : term.maxcol) - 1;
+
+	while (i >= 0 && line[i].state == GLYPH_EMPTY)
+		--i;
+	return i + 1;
+}
+
 char *
 tgetline(char *buf, const Glyph *gp, const Glyph *last, int gettab)
 {
@@ -546,7 +561,7 @@ selnormalize(void)
 
 	/* expand selection over line breaks and tabs */
 	line = TLINE(sel.nb.y);
-	i = tlinelen(line);
+	i = tlinelen(line) - 1;
 	if (i < sel.nb.x)
 		sel.nb.x = i;
 	while (sel.nb.x > 0 && line[sel.nb.x].state == GLYPH_TDUMMY)
@@ -656,14 +671,14 @@ char *
 getsel(void)
 {
 	char *str, *ptr;
-	int y, bufsize, lastx, linelen;
+	int y, lastx, linelen;
 	const Glyph *gp, *last;
 
 	if (sel.ob.x == -1)
 		return NULL;
 
-	bufsize = (term.col+1) * (sel.ne.y-sel.nb.y+1) * UTF_SIZ;
-	ptr = str = xmalloc(bufsize);
+	str = xmalloc((term.col + 1) * (sel.ne.y - sel.nb.y + 1) * UTF_SIZ);
+	ptr = str;
 
 	/* append every set & selected glyph to the selection */
 	for (y = sel.nb.y; y <= sel.ne.y; y++) {
@@ -781,6 +796,62 @@ execsh(char *cmd, char **args)
 }
 
 void
+externalpipe(const Arg *arg)
+{
+	int fd[2];
+	int y, maxy;
+	int alt = IS_SET(MODE_ALTSCREEN);
+	char str[((alt ? term.col : term.maxcol) + 1) * UTF_SIZ];
+	char *ptr;
+	const EPArg *eparg = arg->v;
+	Glyph *gp, *last;
+	void (*psigpipe)(int);
+
+	if (pipe(fd) == -1)
+		die("pipe failed: %s\n", strerror(errno));
+
+	switch (fork()) {
+	case -1:
+		die("fork failed: %s\n", strerror(errno));
+	case 0:
+		close(fd[1]);
+		if (fd[0] != STDIN_FILENO) {
+			if (dup2(fd[0], STDIN_FILENO) != STDIN_FILENO)
+				die("dup2 failed: %s\n", strerror(errno));
+		}
+		close(fd[0]);
+		execvp(eparg->cmd[0], eparg->cmd);
+		fprintf(stderr, "execvp %s failed: %s\n",
+				((char **)arg->v)[0], strerror(errno));
+		_exit(1);
+	}
+
+	close(fd[0]);
+	/* ignore sigpipe for now (in case child exits early) */
+	psigpipe = signal(SIGPIPE, SIG_IGN);
+
+	for (maxy = term.row - 1; maxy >= 0 &&
+			tlinelenmax(term.line[maxy]) == 0; maxy--);
+	y = alt ? 0 : ((eparg->histlines >= 0) ?
+			-MIN(eparg->histlines, term.histf) : -term.histf);
+	for (; y <= maxy; y++) {
+		gp = &TLINEABS(y)[0];
+		last = gp + (alt ? term.col : term.maxcol) - 1;
+		while (last > gp && last->state == GLYPH_EMPTY)
+			last--;
+		ptr = tgetline(str, gp, last, 1);
+		if (!(last->mode & ATTR_WRAP))
+			*(ptr++) = '\n';
+		if (xwrite(fd[1], str, ptr-str) < 0)
+			break;
+	}
+	close(fd[1]);
+
+	/* restore sigpipe handler */
+	signal(SIGPIPE, psigpipe);
+}
+
+void
 sigchld(int a)
 {
 	int stat, tmp;
@@ -794,6 +865,7 @@ sigchld(int a)
 
 	errno = tmp;
 
+	/* TODO: in die, printf and exit are not async-signal-safe */
 	if ((p = waitpid(pid, &stat, WNOHANG)) < 0)
 		die("waiting for pid %hd failed: %s\n", pid, strerror(errno));
 
@@ -1894,8 +1966,9 @@ csihandle(void)
 			tscrollup(0, term.row, 1); */
 
 			/* alacritty does this: */
-			for (n = term.bot; n > 0 && tlinelen(term.line[n]) == 0; n--);
-			tscrollup(0, n + 1, 1);
+			for (n = term.bot; n >= 0 && tlinelen(term.line[n]) == 0; n--);
+			if (n >= 0)
+				tscrollup(0, n + 1, 1);
 			/* term.top is used in selscroll but the relevant lines
 			 * are going to be engulfed (selection will get cleared) */
 			tscrollup(0, term.row - n - 1, 0);
@@ -2223,7 +2296,7 @@ newterm(const Arg *arg)
 		setsid();
 		setpwd();
 		execlp("st", "st", (char *)NULL);
-		die("execlp failed: %s\n", strerror(errno));
+		fprintf(stderr, "execlp st failed: %s\n", strerror(errno));
 		_exit(1);
 		break;
 #if DOUBLEFORKNEWTERM
@@ -2284,21 +2357,20 @@ tdumpsel(void)
 void
 tdumpline(int n)
 {
-	char *str, *ptr;
+	char str[(term.col + 1) * UTF_SIZ];
+	char *ptr;
 	const Glyph *gp, *last;
 
-	ptr = str = xmalloc((term.col+1) * UTF_SIZ);
 	gp = &term.line[n][0];
 	last = gp + term.col - 1;
 	while (last > gp && last->state == GLYPH_EMPTY)
 		last--;
 
-	ptr = tgetline(ptr, gp, last, 1);
+	ptr = tgetline(str, gp, last, 1);
 	if (!(last->mode & ATTR_WRAP))
 		*(ptr++) = '\n';
 
 	tprinter(str, ptr-str);
-	free(str);
 }
 
 void

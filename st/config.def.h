@@ -194,11 +194,15 @@ static MouseShortcut mshortcuts[] = {
 };
 
 /* Internal keyboard shortcuts. */
+
+static EPArg pager = { .histlines = -1, .cmd = (char *[]){ "/media/storage/.temporary/st/pager.sh", NULL } };
+
 #define ALTMOD (Mod1Mask|ShiftMask)
 #define TERMMOD (ControlMask|ShiftMask)
 
 static Shortcut shortcuts[] = {
 	/* mask                 keysym          function        argument */
+        { TERMMOD,              XK_P,           externalpipe,   {.v = &pager} },
 	{ XK_ANY_MOD,           XK_Break,       sendbreak,      {.i =  0} },
 	{ TERMMOD,              XK_plus,        zoom,           {.f = +1} },
 	{ TERMMOD,              XK_underscore,  zoom,           {.f = -1} },
