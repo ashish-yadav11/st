@@ -45,6 +45,7 @@
 #define ISCONTROLC1(c)		(BETWEEN(c, 0x80, 0x9f))
 #define ISCONTROL(c)		(ISCONTROLC0(c) || ISCONTROLC1(c))
 #define ISDELIM(u)		(u && wcschr(worddelimiters, u))
+#define ISSPACE(gp)		(gp->u == ' ' && gp->state == 1)
 #define STRESCARGREST(n)	((n) == 0 ? strescseq.buf : strescseq.argp[(n)-1] + 1)
 #define STRESCARGJUST(n)	(*(strescseq.argp[n]) = '\0', STRESCARGREST(n))
 
@@ -614,9 +615,7 @@ selsnap(int *x, int *y, int direction)
 			gp = &TLINE(newy)[newx];
 			delim = ISDELIM(gp->u);
 			if (!(gp->mode & ATTR_WDUMMY) && (delim != prevdelim ||
-				(delim && (gp->u != prevgp->u ||
-					((gp->state >= GLYPH_TAB) !=
-					 (prevgp->state >= GLYPH_TAB))))))
+			    (delim && !(ISSPACE(gp) && ISSPACE(prevgp)))))
 				break;
 
 			*x = newx;
