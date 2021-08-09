@@ -456,7 +456,9 @@ tlinelen(Line line)
 int
 tiswrapped(Line line)
 {
-	return line[tlinelen(line) - 1].mode & ATTR_WRAP;
+	int len = tlinelen(line);
+
+	return len > 0 && (line[len - 1].mode & ATTR_WRAP);
 }
 
 char *
@@ -2851,7 +2853,7 @@ treflow(int col, int row)
 
 	/* y coordinate of cursor line end */
 	for (oce = term.c.y; oce < term.row - 1 &&
-			tiswrapped(term.line[oce]); oce++);
+	                     tiswrapped(term.line[oce]); oce++);
 
 	nlines = term.histf + oce + 1;
 	if (col < term.col) {
@@ -2883,7 +2885,7 @@ treflow(int col, int row)
 		if (col - nx > len - ox) {
 			memcpy(&buf[ny][nx], &line[ox], (len-ox) * sizeof(Glyph));
 			nx += len - ox;
-			if (!(line[len - 1].mode & ATTR_WRAP)) {
+			if (len == 0 || !(line[len - 1].mode & ATTR_WRAP)) {
 				for (j = nx; j < col; j++)
 					tclearglyph(&buf[ny][j], 0);
 				nx = 0;
@@ -2893,8 +2895,7 @@ treflow(int col, int row)
 			ox = 0, oy++;
 		} else if (col - nx == len - ox) {
 			memcpy(&buf[ny][nx], &line[ox], (col-nx) * sizeof(Glyph));
-			ox = 0, oy++;
-			nx = 0;
+			ox = 0, oy++, nx = 0;
 		} else/* if (col - nx < len - ox) */ {
 			memcpy(&buf[ny][nx], &line[ox], (col-nx) * sizeof(Glyph));
 			for (ox += col - nx; ox < len &&
@@ -3016,7 +3017,7 @@ tresize(int col, int row)
 		c = term.c;
 		tswapscreen(0);
 		term.c = tcurbuf[0];
-		/* tcurbuf could be holding a corrupt y value */
+		/* tcurbuf could be holding corrupt values */
 		term.c.y = MIN(term.c.y, term.row - 1);
 		term.c.x = MIN(term.c.y, term.col - 1);
 	}
