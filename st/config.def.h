@@ -30,7 +30,7 @@ static float cwscale = 1.0;
 static float chscale = 1.0;
 
 /* word delimiter string */
-wchar_t *worddelimiters = L" `'\"()[]{}";
+wchar_t *worddelimiters = L" `'\"()[]{}│";
 
 /* selection timeouts (in milliseconds) */
 static unsigned int doubleclicktimeout = 300;
@@ -53,7 +53,7 @@ int resettitleonris = 0;
  * low minlatency will tear/flicker more, as it can "detect" idle too early.
  */
 static double minlatency = 15;
-static double maxlatency = 50;
+static double maxlatency = 40;
 
 /*
  * blinking timeout (set to 0 to disable blinking) for the terminal blinking
