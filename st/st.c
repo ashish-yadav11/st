@@ -836,7 +836,6 @@ externalpipe(const Arg *arg)
 			break;
 	}
 	close(fd[1]);
-
 	/* restore sigpipe handler */
 	signal(SIGPIPE, psigpipe);
 }
@@ -848,11 +847,9 @@ sigchld(int a)
 	pid_t p;
 
 	tmp = errno; /* waitpid might change errno */
-
 	while ((p = waitpid(-1, &stat, WNOHANG)) > 0)
 		if (p == pid)
 			goto check;
-
 	errno = tmp;
 
 	/* TODO: in die, printf and exit are not async-signal-safe */
