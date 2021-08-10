@@ -800,7 +800,7 @@ externalpipe(const Arg *arg)
 		if (iofd != -1 && iofd != 1)
 			close(iofd);
 		close(cmdfd);
-
+		setsid();
 		close(fd[1]);
 		if (fd[0] != STDIN_FILENO) {
 			if (dup2(fd[0], STDIN_FILENO) != STDIN_FILENO)
