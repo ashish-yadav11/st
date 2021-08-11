@@ -2083,7 +2083,7 @@ run:
 	XSetLocaleModifiers("");
 	cols = MAX(cols, 1);
 	rows = MAX(rows, 1);
-	tnew(cols, rows);
+	tinit(cols, rows);
 	xinit(cols, rows);
 	xsetenv();
 	selinit();
