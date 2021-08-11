@@ -1,12 +1,6 @@
 # st version
 VERSION = 0.8.4
 
-# cflags
-CFLAGS = -Wall -Og
-#CFLAGS = -Wall -Wextra -Wno-unused-parameter -Og
-#CFLAGS = -Wall -O3
-#CFLAGS = -Wall -Wextra -Wno-unused-parameter -O3
-
 # Customize below to fit your system
 
 # paths
@@ -27,6 +21,11 @@ LIBS = -L$(X11LIB) -lm -lrt -lX11 -lutil -lXft \
        `$(PKG_CONFIG) --libs freetype2`
 
 # flags
+
+CFLAGS = -g -Wall -Og
+#CFLAGS = -g -Wall -Wextra -Wno-unused-parameter -Og
+#CFLAGS = -Wall -O3
+#CFLAGS = -Wall -Wextra -Wno-unused-parameter -O3
 STCPPFLAGS = -DVERSION=\"$(VERSION)\" -D_XOPEN_SOURCE=600
 STCFLAGS = $(INCS) $(STCPPFLAGS) $(CPPFLAGS) $(CFLAGS)
 STLDFLAGS = $(LIBS) $(LDFLAGS)
@@ -38,4 +37,4 @@ STLDFLAGS = $(LIBS) $(LDFLAGS)
 #       `$(PKG_CONFIG) --libs freetype2`
 
 # compiler and linker
-# CC = c99
+#CC = c99
