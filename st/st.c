@@ -2473,14 +2473,18 @@ tputtab(int n)
 void
 twritetab(void)
 {
-	int x = term.c.x;
+	int x = term.c.x, y = term.c.y;
 
-	term.line[term.c.y][x].u = ' ';
-	term.line[term.c.y][x].state = GLYPH_TAB;
+	/* selected() takes relative coordinates */
+	if (selected(x + term.scr, y + term.scr))
+		selclear();
+
+	term.line[y][x].u = ' ';
+	term.line[y][x].state = GLYPH_TAB;
 
 	while (++x < term.col && !term.tabs[x]) {
-		term.line[term.c.y][x].u = ' ';
-		term.line[term.c.y][x].state = GLYPH_TDUMMY;
+		term.line[y][x].u = ' ';
+		term.line[y][x].state = GLYPH_TDUMMY;
 	}
 
 	term.c.x = MIN(x, term.col-1);
