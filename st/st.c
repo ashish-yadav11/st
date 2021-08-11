@@ -29,6 +29,8 @@
 #endif
 
 #define DOUBLEFORKNEWTERM		1
+/* command to execute on right clicking selection */
+#define PLUMBER(selstr)			((char *const[]){ "st-plumber", selstr, NULL })
 
 /* Arbitrary sizes */
 #define UTF_INVALID   0xFFFD
@@ -799,6 +801,29 @@ execsh(char *cmd, char **args)
 }
 
 void
+plumb(int x, int y, char *selstr)
+{
+	if (sel.mode != SEL_IDLE || !selected(x, y))
+		return;
+
+	switch (fork()) {
+	case -1:
+		die("fork failed: %s\n", strerror(errno));
+		break;
+	case 0:
+		if (iofd != -1 && iofd != 1)
+			close(iofd);
+		close(cmdfd);
+		setsid();
+		setpwd();
+		execvp(PLUMBER(selstr)[0], PLUMBER(selstr));
+		fprintf(stderr, "execvp plumber failed: %s\n", strerror(errno));
+		_exit(1);
+		break;
+	}
+}
+
+void
 externalpipe(const Arg *arg)
 {
 	int fd[2];
@@ -815,6 +840,7 @@ externalpipe(const Arg *arg)
 	switch (fork()) {
 	case -1:
 		die("fork failed: %s\n", strerror(errno));
+		break;
 	case 0:
 		if (iofd != -1 && iofd != 1)
 			close(iofd);
@@ -827,9 +853,10 @@ externalpipe(const Arg *arg)
 		}
 		close(fd[0]);
 		execvp(ep->cmd[0], ep->cmd);
-		fprintf(stderr, "execvp %s failed: %s\n",
-				((char **)arg->v)[0], strerror(errno));
+		fprintf(stderr, "execvp %s failed: %s\n", ep->cmd[0],
+				strerror(errno));
 		_exit(1);
+		break;
 	}
 
 	close(fd[0]);
