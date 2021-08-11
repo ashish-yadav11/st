@@ -1315,7 +1315,6 @@ tscrollup(int top, int bot, int n, int mode)
 
 	LIMIT(n, 0, bot-top+1);
 
-	s = n;
 	if (savehist) {
 		for (i = 0; i < n; i++) {
 			term.histi = (term.histi + 1) % HISTSIZE;
@@ -1326,6 +1325,7 @@ tscrollup(int top, int bot, int n, int mode)
 			term.line[i] = temp;
 		}
 		term.histf = MIN(term.histf + n, HISTSIZE);
+		s = n;
 		if (term.scr) {
 			j = term.scr;
 			term.scr = MIN(j + n, HISTSIZE);
