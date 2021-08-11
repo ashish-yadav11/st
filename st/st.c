@@ -235,6 +235,8 @@ static void tsetchar(Rune, const Glyph *, int, int);
 static void tsetdirt(int, int);
 static void tsetscroll(int, int);
 static void tswapscreen();
+static void tloaddefscreen(int, int);
+static void tloadaltscreen(int, int);
 static void tsetmode(int, int, const int *, int);
 static int twrite(const char *, int, int);
 static void tfulldirt(void);
@@ -675,7 +677,7 @@ getsel(void)
 	int y, lastx, linelen;
 	const Glyph *gp, *last;
 
-	if (sel.ob.x == -1)
+	if (sel.ob.x == -1 || sel.alt != IS_SET(MODE_ALTSCREEN))
 		return NULL;
 
 	str = xmalloc((term.col + 1) * (sel.ne.y - sel.nb.y + 1) * UTF_SIZ);
@@ -1233,6 +1235,43 @@ tswapscreen()
 	term.mode ^= MODE_ALTSCREEN;
 }
 
+void
+tloaddefscreen(int clear, int loadcursor)
+{
+	int col, row, alt = IS_SET(MODE_ALTSCREEN);
+
+	if (alt) {
+		if (clear)
+			tfullclear(1, 0);
+		col = term.col, row = term.row;
+		tswapscreen();
+	}
+	if (loadcursor)
+		tcursor(CURSOR_LOAD);
+	if (alt)
+		tresizedef(col, row);
+}
+
+void
+tloadaltscreen(int clear, int savecursor)
+{
+	int col, row, alt = IS_SET(MODE_ALTSCREEN);
+
+	if (savecursor)
+		tcursor(CURSOR_SAVE);
+	if (alt) {
+		if (clear)
+			tfullclear(1, 1);
+	} else {
+		col = term.col, row = term.row;
+		tswapscreen();
+		term.scr = 0;
+		if (clear)
+			tfullclear(1, 0);
+		tresizealt(col, row);
+	}
+}
+
 int
 tisaltscreen(void)
 {
@@ -1257,7 +1296,7 @@ kscrolldown(const Arg* a)
 		term.scr = 0;
 	}
 
-	if (sel.ob.x != -1)
+	if (sel.ob.x != -1 && !sel.alt)
 		selmove(-n); /* negate change in term.scr */
 	tfulldirt();
 }
@@ -1280,7 +1319,7 @@ kscrollup(const Arg* a)
 		term.scr = term.histf;
 	}
 
-	if (sel.ob.x != -1)
+	if (sel.ob.x != -1 && !sel.alt)
 		selmove(n); /* negate change in term.scr */
 	tfulldirt();
 }
@@ -1302,15 +1341,16 @@ tscrolldown(int top, int n)
 		term.line[i-n] = temp;
 	}
 
-	selscroll(top, term.bot, n);
+	if (sel.ob.x != -1 && sel.alt == IS_SET(MODE_ALTSCREEN))
+		selscroll(top, term.bot, n);
 }
 
 void
 tscrollup(int top, int bot, int n, int mode)
 {
 	int i, j, s;
-	int savehist = !IS_SET(MODE_ALTSCREEN) && top == 0
-		&& mode != SCROLL_NOSAVEHIST;
+	int alt = IS_SET(MODE_ALTSCREEN);
+	int savehist = !alt && top == 0 && mode != SCROLL_NOSAVEHIST;
 	Line temp;
 
 	LIMIT(n, 0, bot-top+1);
@@ -1345,12 +1385,14 @@ tscrollup(int top, int bot, int n, int mode)
 		term.line[i+n] = temp;
 	}
 
-	if (!savehist) {
-		selscroll(top, bot, -n);
-	} else if (s > 0 && sel.ob.x != -1) {
-		selmove(-s);
-		if (-term.scr + sel.nb.y < -term.histf)
-			selremove();
+	if (sel.ob.x != -1 || sel.alt == alt) {
+		if (!savehist) {
+			selscroll(top, bot, -n);
+		} else if (s > 0) {
+			selmove(-s);
+			if (-term.scr + sel.nb.y < -term.histf)
+				selremove();
+		}
 	}
 }
 
@@ -1364,9 +1406,6 @@ selmove(int n)
 void
 selscroll(int top, int bot, int n)
 {
-	if (sel.ob.x == -1)
-		return;
-
 	/* turn absolute coordinates into relative */
 	top += term.scr, bot += term.scr;
 
@@ -1505,7 +1544,8 @@ tfullclear(int resetcursor, int setdirt)
 
 	if (resetcursor)
 		tresetcursor();
-	selremove();
+	if (sel.alt == IS_SET(MODE_ALTSCREEN))
+		selremove();
 	for (y = 0; y < term.row; y++)
 		for (x = 0; x < term.col; x++)
 			tclearglyph(&term.line[y][x], 1);
@@ -1758,7 +1798,6 @@ tsetscroll(int t, int b)
 void
 tsetmode(int priv, int set, const int *args, int narg)
 {
-	int alt, col, row;
 	const int *lim;
 
 	for (lim = args + narg; args < lim; ++args) {
@@ -1819,41 +1858,21 @@ tsetmode(int priv, int set, const int *args, int narg)
 			case 1034:
 				xsetmode(set, MODE_8BIT);
 				break;
-			case 1049: /* swap screen, save/restore cursor and
-			              clear alternate screen */
-			case 1047: /* clear alternate screen and swap screen */
+			case 1049: /* swap screen + save/restore cursor, clearing
+			              alternate screen when switching to it */
+			case 1047: /* swap screen, clearing alternate screen
+			              when switching from it */
 			case 47:   /* swap screen */
 				if (!allowaltscreen)
 					break;
-				alt = IS_SET(MODE_ALTSCREEN);
-				if (set) {
-					if (*args == 1049)
-						tcursor(CURSOR_SAVE);
-					if (alt) {
-						if (*args == 1049)
-							tfullclear(1, 1);
-					} else {
-						col = term.col, row = term.row;
-						tswapscreen();
-						term.scr = 0;
-						if (*args == 1049)
-							tfullclear(1, 0);
-						tresizealt(col, row);
-					}
-				} else {
-					if (alt) {
-						if (*args == 1047)
-							tfullclear(1, 0);
-						col = term.col, row = term.row;
-						tswapscreen();
-					}
-					if (*args == 1049)
-						tcursor(CURSOR_LOAD);
-					if (alt)
-						tresizedef(col, row);
-				}
+				if (set)
+					tloadaltscreen(*args == 1049, *args == 1049);
+				else
+					tloaddefscreen(*args == 1047, *args == 1049);
 				break;
 			case 1048:
+				if (!allowaltscreen)
+					break;
 				tcursor(set ? CURSOR_SAVE : CURSOR_LOAD);
 				break;
 			case 2004: /* 2004: bracketed paste mode */
@@ -3035,7 +3054,7 @@ rscrolldown(int n)
 		term.scr = i;
 	} else {
 		term.scr = 0;
-		if (sel.ob.x != -1)
+		if (sel.ob.x != -1 && !sel.alt)
 			selmove(-i);
 	}
 }
@@ -3079,7 +3098,8 @@ tresizedef(int col, int row)
 		return;
 	}
 	if (col != term.col) {
-		selremove();
+		if (!sel.alt)
+			selremove();
 		treflow(col, row);
 	} else {
 		/* slide screen up if otherwise cursor would get out of the screen */
@@ -3119,7 +3139,8 @@ tresizealt(int col, int row)
 		tfulldirt();
 		return;
 	}
-	selremove();
+	if (sel.alt)
+		selremove();
 	/* slide screen up if otherwise cursor would get out of the screen */
 	for (i = 0; i <= term.c.y - row; i++)
 		free(term.line[i]);
