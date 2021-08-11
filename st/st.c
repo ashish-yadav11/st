@@ -2022,7 +2022,7 @@ csihandle(void)
 			tscrollup(0, term.row-1, term.row, SCROLL_SAVEHIST); */
 
 			/* alacritty does this: */
-			for (n = term.row-1; n && tlinelen(term.line[n]) == 0; n--);
+			for (n = term.row-1; n >= 0 && tlinelen(term.line[n]) == 0; n--);
 			if (n >= 0)
 				tscrollup(0, term.row-1, n+1, SCROLL_SAVEHIST);
 			tscrollup(0, term.row-1, term.row-n-1, SCROLL_NOSAVEHIST);
