@@ -211,7 +211,7 @@ static void tclearglyph(Glyph *, int);
 static void tfullclear(void);
 static void tclearregion(int, int, int, int, int);
 static void tcursor(int);
-static void tresetcursor();
+static void tresetcursor(void);
 static void tdeletechar(int);
 static void tdeleteline(int);
 static void tinsertblank(int);
@@ -236,7 +236,7 @@ static void tsetattr(const int *, int);
 static void tsetchar(Rune, const Glyph *, int, int);
 static void tsetdirt(int, int);
 static void tsetscroll(int, int);
-static void tswapscreen();
+static void tswapscreen(void);
 static void tloaddefscreen(int, int);
 static void tloadaltscreen(int, int);
 static void tsetmode(int, int, const int *, int);
@@ -1132,7 +1132,7 @@ ttyresize(int tw, int th)
 }
 
 void
-ttyhangup()
+ttyhangup(void)
 {
 	/* Send SIGHUP to shell */
 	kill(pid, SIGHUP);
@@ -1251,7 +1251,7 @@ tinit(int col, int row)
 }
 
 void
-tswapscreen()
+tswapscreen(void)
 {
 	static Line *altline;
 	Line *tmpline = term.line;
