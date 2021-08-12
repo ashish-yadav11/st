@@ -24,6 +24,8 @@ build() {
 package() {
     cd "$srcdir/$_pkgname"
     make PREFIX=/usr DESTDIR="$pkgdir" install
+    install -m644 -D st-pager "$pkgdir/usr/bin/st-pager"
+    install -m644 -D st-plumber "$pkgdir/usr/bin/st-plumber"
     install -m644 -D LICENSE "$pkgdir/usr/share/doc/$_pkgname/LICENSE"
     install -m644 -D README "$pkgdir/usr/share/doc/$_pkgname/README"
     install -m644 -D "$srcdir/$_pkgname.desktop" "$pkgdir/usr/share/applications/$_pkgname.desktop"
