@@ -9,6 +9,11 @@ arch=(i686 x86_64)
 url="https://st.suckless.org/"
 license=(MIT)
 depends=(libxft)
+optdepends=('neovim: required by st-pager'
+            'perl: required by st-plumber'
+            'perl-regexp-common: required by st-plumber'
+            'xdg-uitls: xdg-open required by st-pluber'
+            'libnotify: required by st-plumber')
 provides=(st)
 conflicts=(st)
 options=('!strip')
