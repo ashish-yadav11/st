@@ -1,6 +1,12 @@
 #!/bin/sh
 # requires https://metacpan.org/pod/Regexp::Common::URI
-[ -f "$1" ] && { setsid -f xdg-open "$1"; exit ;}
+open() {
+    exec setsid -f xdg-open "$@"
+}
+
+[ -f "$1" ] && open "$1"
+
 url="$(echo "$1" | perl -M'Regexp::Common=URI' -ne 'if (/($RE{URI})/) {print $1; exit}')"
-[ -n "$url" ] && { setsid -f "${BROWSER:-xdg-open}" "$url"; exit ;}
+[ -n "$url" ] && open "$1"
+
 notify-send -t 2000 -u critical st-plumber "Selection is not a valid file or url!"
