@@ -1412,7 +1412,7 @@ tscrollup(int top, int bot, int n, int mode)
 		term.line[i+n] = temp;
 	}
 
-	if (sel.ob.x != -1 || sel.alt == alt) {
+	if (sel.ob.x != -1 && sel.alt == alt) {
 		if (!savehist) {
 			selscroll(top, bot, -n);
 		} else if (s > 0) {
