@@ -1569,7 +1569,7 @@ tfullclear(void)
 {
 	int y, x;
 
-	if (sel.alt == IS_SET(MODE_ALTSCREEN))
+	if (sel.alt == IS_SET(MODE_ALTSCREEN) && sel.ne.y >= term.scr)
 		selremove();
 	for (y = 0; y < term.row; y++)
 		for (x = 0; x < term.col; x++)
