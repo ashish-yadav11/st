@@ -606,9 +606,12 @@ void
 selsnap(int *x, int *y, int direction)
 {
 	int newx, newy, xt, yt;
-	int rtop = -term.histf + term.scr, rbot = term.row - 1 + term.scr;
+	int rtop = 0, rbot = term.row - 1;
 	int delim, prevdelim;
 	const Glyph *gp, *prevgp;
+
+	if (!IS_SET(MODE_ALTSCREEN))
+		rtop += -term.histf + term.scr, rbot += term.scr;
 
 	switch (sel.snap) {
 	case SNAP_WORD:
