@@ -208,7 +208,7 @@ static void tdumpsel(void);
 static void tdumpline(int);
 static void tdump(void);
 static void tclearglyph(Glyph *, int);
-static void tfullclear(int, int);
+static void tfullclear(int);
 static void tclearregion(int, int, int, int, int);
 static void tcursor(int);
 static void tresetcursor();
@@ -1173,7 +1173,7 @@ tsetdirtattr(int attr)
 	for (i = 0; i < term.row-1; i++) {
 		for (j = 0; j < term.col-1; j++) {
 			if (term.line[i][j].mode & attr) {
-				tsetdirt(i, i);
+				term.dirty[i] = 1;
 				break;
 			}
 		}
@@ -1183,7 +1183,7 @@ tsetdirtattr(int attr)
 void
 tfulldirt(void)
 {
-	tsetdirt(0, term.row-1);
+	memset(term.dirty, 1, term.row * sizeof(*term.dirty));
 }
 
 void
@@ -1224,11 +1224,10 @@ treset(void)
 	term.charset = 0;
 
 	for (i = 0; i < 2; i++) {
-		tfullclear(1, 0);
+		tfullclear(1);
 		tcursor(CURSOR_SAVE);
 		tswapscreen();
 	}
-	tfulldirt();
 }
 
 void
@@ -1272,7 +1271,7 @@ tloaddefscreen(int clear, int loadcursor)
 
 	if (alt) {
 		if (clear)
-			tfullclear(1, 0);
+			tfullclear(1);
 		col = term.col, row = term.row;
 		tswapscreen();
 	}
@@ -1285,21 +1284,19 @@ tloaddefscreen(int clear, int loadcursor)
 void
 tloadaltscreen(int clear, int savecursor)
 {
-	int col, row, alt = IS_SET(MODE_ALTSCREEN);
+	int col, row, def = !IS_SET(MODE_ALTSCREEN);
 
 	if (savecursor)
 		tcursor(CURSOR_SAVE);
-	if (alt) {
-		if (clear)
-			tfullclear(1, 1);
-	} else {
+	if (def) {
 		col = term.col, row = term.row;
 		tswapscreen();
 		term.scr = 0;
-		if (clear)
-			tfullclear(1, 0);
-		tresizealt(col, row);
 	}
+	if (clear)
+		tfullclear(1);
+	if (def)
+		tresizealt(col, row);
 }
 
 int
@@ -1568,7 +1565,7 @@ tclearglyph(Glyph *gp, int usecurattr)
 }
 
 void
-tfullclear(int resetcursor, int setdirt)
+tfullclear(int resetcursor)
 {
 	int y, x;
 
@@ -1576,11 +1573,11 @@ tfullclear(int resetcursor, int setdirt)
 		tresetcursor();
 	if (sel.alt == IS_SET(MODE_ALTSCREEN))
 		selremove();
-	for (y = 0; y < term.row; y++)
+	for (y = 0; y < term.row; y++) {
+		term.dirty[y] = 1;
 		for (x = 0; x < term.col; x++)
 			tclearglyph(&term.line[y][x], 1);
-	if (setdirt)
-		tfulldirt();
+	}
 }
 
 void
@@ -2064,7 +2061,7 @@ csihandle(void)
 			break;
 		case 2: /* all */
 			if (IS_SET(MODE_ALTSCREEN)) {
-				tfullclear(0, 1);
+				tfullclear(0);
 				break;
 			}
 			/* vte does this:
