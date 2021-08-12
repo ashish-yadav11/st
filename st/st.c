@@ -1571,11 +1571,10 @@ tfullclear(void)
 
 	if (sel.alt == IS_SET(MODE_ALTSCREEN))
 		selremove();
-	for (y = 0; y < term.row; y++) {
-		term.dirty[y] = 1;
+	for (y = 0; y < term.row; y++)
 		for (x = 0; x < term.col; x++)
 			tclearglyph(&term.line[y][x], 1);
-	}
+	tfulldirt();
 }
 
 void
