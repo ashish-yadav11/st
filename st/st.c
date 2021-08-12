@@ -208,7 +208,7 @@ static void tdumpsel(void);
 static void tdumpline(int);
 static void tdump(void);
 static void tclearglyph(Glyph *, int);
-static void tfullclear(int);
+static void tfullclear(void);
 static void tclearregion(int, int, int, int, int);
 static void tcursor(int);
 static void tresetcursor();
@@ -1224,8 +1224,9 @@ treset(void)
 	term.charset = 0;
 
 	for (i = 0; i < 2; i++) {
-		tfullclear(1);
+		tresetcursor();
 		tcursor(CURSOR_SAVE);
+		tfullclear();
 		tswapscreen();
 	}
 }
@@ -1271,7 +1272,7 @@ tloaddefscreen(int clear, int loadcursor)
 
 	if (alt) {
 		if (clear)
-			tfullclear(1);
+			tfullclear();
 		col = term.col, row = term.row;
 		tswapscreen();
 	}
@@ -1292,11 +1293,10 @@ tloadaltscreen(int clear, int savecursor)
 		col = term.col, row = term.row;
 		tswapscreen();
 		term.scr = 0;
+		tresizealt(col, row);
 	}
 	if (clear)
-		tfullclear(1);
-	if (def)
-		tresizealt(col, row);
+		tfullclear();
 }
 
 int
@@ -1565,12 +1565,10 @@ tclearglyph(Glyph *gp, int usecurattr)
 }
 
 void
-tfullclear(int resetcursor)
+tfullclear(void)
 {
 	int y, x;
 
-	if (resetcursor)
-		tresetcursor();
 	if (sel.alt == IS_SET(MODE_ALTSCREEN))
 		selremove();
 	for (y = 0; y < term.row; y++) {
@@ -2061,7 +2059,7 @@ csihandle(void)
 			break;
 		case 2: /* all */
 			if (IS_SET(MODE_ALTSCREEN)) {
-				tfullclear(0);
+				tfullclear();
 				break;
 			}
 			/* vte does this:
