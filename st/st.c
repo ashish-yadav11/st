@@ -211,7 +211,6 @@ static void tclearglyph(Glyph *, int);
 static void tclearregion(int, int, int, int, int);
 static void tcursor(int);
 static void tresetcursor(void);
-static void terasechar(int);
 static void tdeletechar(int);
 static void tdeleteline(int);
 static void tinsertblank(int);
@@ -1598,51 +1597,42 @@ tclearregion(int x1, int y1, int x2, int y2, int usecurattr)
 }
 
 void
-terasechar(int n)
-{
-	if (n <= 0)
-		return;
-	n = MIN(n, term.col - 1 - term.c.x);
-
-	tclearregion(term.c.x, term.c.y, term.c.x+n, term.c.y, 1);
-}
-
-void
 tdeletechar(int n)
 {
-	int dst, src, size;
-	Glyph *line;
+	int src, dst, size;
+	Line line;
 
 	if (n <= 0)
 		return;
-	n = MIN(n, term.col - 1 - term.c.x);
 
+	src = MAX(term.c.x + n, term.col);
 	dst = term.c.x;
-	src = term.c.x + n;
 	size = term.col - src;
-	line = term.line[term.c.y];
-
-	memmove(&line[dst], &line[src], size * sizeof(Glyph));
-	tclearregion(term.col-n, term.c.y, term.col-1, term.c.y, 1);
+	if (size > 0) { /* otherwise src would point beyond the array
+	                   https://stackoverflow.com/questions/29844298 */
+		line = term.line[term.c.y];
+		memmove(&line[dst], &line[src], size * sizeof(Glyph));
+	}
+	tclearregion(dst + size, term.c.y, term.col - 1, term.c.y, 1);
 }
 
 void
 tinsertblank(int n)
 {
-	int dst, src, size;
-	Glyph *line;
+	int src, dst, size;
+	Line line;
 
 	if (n <= 0)
 		return;
-	n = MIN(n, term.col - 1 - term.c.x);
 
-	dst = term.c.x + n;
 	src = term.c.x;
+	dst = MAX(term.c.x + n, term.col);
 	size = term.col - dst;
-	line = term.line[term.c.y];
-
-	memmove(&line[dst], &line[src], size * sizeof(Glyph));
-	tclearregion(src, term.c.y, dst - 1, term.c.y, 1);
+	if (size > 0) { /* otherwise dst would point beyond the array */
+		line = term.line[term.c.y];
+		memmove(&line[dst], &line[src], size * sizeof(Glyph));
+	}
+	tclearregion(src, term.c.y, term.col - 1, term.c.y, 1);
 }
 
 void
@@ -1955,7 +1945,7 @@ void
 csihandle(void)
 {
 	char buf[40];
-	int n;
+	int n, x;
 
 	switch (csiescseq.mode[0]) {
 	default:
@@ -2114,8 +2104,11 @@ csihandle(void)
 		tdeleteline(csiescseq.arg[0]);
 		break;
 	case 'X': /* ECH -- Erase <n> char */
+		if (csiescseq.arg[0] < 0)
+			return;
 		DEFAULT(csiescseq.arg[0], 1);
-		terasechar(csiescseq.arg[0]);
+		x = MIN(term.c.x + csiescseq.arg[0], term.col - 1);
+		tclearregion(term.c.x, term.c.y, x, term.c.y, 1);
 		break;
 	case 'P': /* DCH -- Delete <n> char */
 		DEFAULT(csiescseq.arg[0], 1);
@@ -2943,7 +2936,7 @@ treflow(int col, int row)
 	int oce, nce, bot, scr;
 	int ox = 0, oy = -term.histf, nx = 0, ny = -1, len;
 	int cy = -1; /* proxy for new y coordinate of cursor */
-	size_t nlines;
+	int nlines;
 	Line *buf, line;
 
 	/* y coordinate of cursor line end */
