@@ -1594,9 +1594,8 @@ tdeletechar(int n)
 
 	if (n <= 0)
 		return;
-
-	src = MAX(term.c.x + n, term.col);
 	dst = term.c.x;
+	src = MIN(term.c.x + n, term.col);
 	size = term.col - src;
 	if (size > 0) { /* otherwise src would point beyond the array
 	                   https://stackoverflow.com/questions/29844298 */
@@ -1614,15 +1613,14 @@ tinsertblank(int n)
 
 	if (n <= 0)
 		return;
-
+	dst = MIN(term.c.x + n, term.col);
 	src = term.c.x;
-	dst = MAX(term.c.x + n, term.col);
 	size = term.col - dst;
 	if (size > 0) { /* otherwise dst would point beyond the array */
 		line = term.line[term.c.y];
 		memmove(&line[dst], &line[src], size * sizeof(Glyph));
 	}
-	tclearregion(src, term.c.y, term.col - 1, term.c.y, 1);
+	tclearregion(src, term.c.y, dst - 1, term.c.y, 1);
 }
 
 void
