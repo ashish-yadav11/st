@@ -593,9 +593,9 @@ regionselected(int x1, int y1, int x2, int y2)
 	    sel.alt != IS_SET(MODE_ALTSCREEN) || sel.nb.y > y2 || sel.ne.y < y1)
 		return 0;
 
-	return (sel.type == SEL_RECTANGULAR) ? sel.nb.x <= x2 && sel.ne.y >= x1
+	return (sel.type == SEL_RECTANGULAR) ? sel.nb.x <= x2 && sel.ne.x >= x1
 		: (sel.nb.y != y2 || sel.nb.x <= x2) &&
-		  (sel.ne.y != y1 || sel.ne.y >= x1);
+		  (sel.ne.y != y1 || sel.ne.x >= x1);
 }
 
 int
