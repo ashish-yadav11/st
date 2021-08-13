@@ -208,10 +208,10 @@ static void tdumpsel(void);
 static void tdumpline(int);
 static void tdump(void);
 static void tclearglyph(Glyph *, int);
-static void tfullclear(void);
 static void tclearregion(int, int, int, int, int);
 static void tcursor(int);
 static void tresetcursor(void);
+static void terasechar(int);
 static void tdeletechar(int);
 static void tdeleteline(int);
 static void tinsertblank(int);
@@ -259,6 +259,7 @@ static void selmove(int);
 static void selremove(void);
 static void selscroll(int, int, int);
 static void selsnap(int *, int *, int);
+static int regionselected(int, int, int, int);
 
 static size_t utf8decode(const char *, Rune *, size_t);
 static Rune utf8decodebyte(char, size_t *);
@@ -584,6 +585,18 @@ selnormalize(void)
 	if (line[sel.ne.x].state >= GLYPH_TAB)
 		while (sel.ne.x < i && line[sel.ne.x+1].state == GLYPH_TDUMMY)
 			sel.ne.x++;
+}
+
+int
+regionselected(int x1, int y1, int x2, int y2)
+{
+	if (sel.ob.x == -1 || sel.mode == SEL_EMPTY ||
+	    sel.alt != IS_SET(MODE_ALTSCREEN) || sel.nb.y > y2 || sel.ne.y < y1)
+		return 0;
+
+	return (sel.type == SEL_RECTANGULAR) ? sel.nb.x <= x2 && sel.ne.y >= x1
+		: (sel.nb.y != y2 || sel.nb.x <= x2) &&
+		  (sel.ne.y != y1 || sel.ne.y >= x1);
 }
 
 int
@@ -1212,6 +1225,7 @@ treset(void)
 {
 	uint i;
 
+	tresetcursor();
 	memset(term.tabs, 0, term.col * sizeof(*term.tabs));
 	for (i = tabspaces; i < term.col; i += tabspaces)
 		term.tabs[i] = 1;
@@ -1224,9 +1238,8 @@ treset(void)
 	term.charset = 0;
 
 	for (i = 0; i < 2; i++) {
-		tresetcursor();
 		tcursor(CURSOR_SAVE);
-		tfullclear();
+		tclearregion(0, 0, term.col-1, term.row-1, 0);
 		tswapscreen();
 	}
 }
@@ -1272,7 +1285,7 @@ tloaddefscreen(int clear, int loadcursor)
 
 	if (alt) {
 		if (clear)
-			tfullclear();
+			tclearregion(0, 0, term.col-1, term.row-1, 1);
 		col = term.col, row = term.row;
 		tswapscreen();
 	}
@@ -1296,7 +1309,7 @@ tloadaltscreen(int clear, int savecursor)
 		tresizealt(col, row);
 	}
 	if (clear)
-		tfullclear();
+		tclearregion(0, 0, term.col-1, term.row-1, 1);
 }
 
 int
@@ -1354,22 +1367,24 @@ kscrollup(const Arg* a)
 void
 tscrolldown(int top, int n)
 {
-	int i;
+	int i, bot = term.bot;
 	Line temp;
 
-	LIMIT(n, 0, term.bot-top+1);
+	if (n <= 0)
+		return;
+	n = MIN(n, bot-top+1);
 
-	tsetdirt(top, term.bot-n);
-	tclearregion(0, term.bot-n+1, term.col-1, term.bot, 1);
+	tsetdirt(top, bot-n);
+	tclearregion(0, bot-n+1, term.col-1, bot, 1);
 
-	for (i = term.bot; i >= top+n; i--) {
+	for (i = bot; i >= top+n; i--) {
 		temp = term.line[i];
 		term.line[i] = term.line[i-n];
 		term.line[i-n] = temp;
 	}
 
 	if (sel.ob.x != -1 && sel.alt == IS_SET(MODE_ALTSCREEN))
-		selscroll(top, term.bot, n);
+		selscroll(top, bot, n);
 }
 
 void
@@ -1380,7 +1395,9 @@ tscrollup(int top, int bot, int n, int mode)
 	int savehist = !alt && top == 0 && mode != SCROLL_NOSAVEHIST;
 	Line temp;
 
-	LIMIT(n, 0, bot-top+1);
+	if (n <= 0)
+		return;
+	n = MIN(n, bot-top+1);
 
 	if (savehist) {
 		for (i = 0; i < n; i++) {
@@ -1565,42 +1582,29 @@ tclearglyph(Glyph *gp, int usecurattr)
 }
 
 void
-tfullclear(void)
-{
-	int y, x;
-
-	if (sel.alt == IS_SET(MODE_ALTSCREEN) && sel.ne.y >= term.scr)
-		selremove();
-	for (y = 0; y < term.row; y++)
-		for (x = 0; x < term.col; x++)
-			tclearglyph(&term.line[y][x], 1);
-	tfulldirt();
-}
-
-void
 tclearregion(int x1, int y1, int x2, int y2, int usecurattr)
 {
-	int x, y, temp;
+	int x, y;
 
-	if (x1 > x2)
-		temp = x1, x1 = x2, x2 = temp;
-	if (y1 > y2)
-		temp = y1, y1 = y2, y2 = temp;
-
-	LIMIT(x1, 0, term.col-1);
-	LIMIT(x2, 0, term.col-1);
-	LIMIT(y1, 0, term.row-1);
-	LIMIT(y2, 0, term.row-1);
+	/* regionselected() takes relative coordinates */
+	if (regionselected(x1+term.scr, y1+term.scr, x2+term.scr, y2+term.scr))
+		selremove();
 
 	for (y = y1; y <= y2; y++) {
 		term.dirty[y] = 1;
-		for (x = x1; x <= x2; x++) {
-			/* selected() takes relative coordinates */
-			if (selected(x + term.scr, y + term.scr))
-				selremove();
+		for (x = x1; x <= x2; x++)
 			tclearglyph(&term.line[y][x], usecurattr);
-		}
 	}
+}
+
+void
+terasechar(int n)
+{
+	if (n <= 0)
+		return;
+	n = MIN(n, term.col - 1 - term.c.x);
+
+	tclearregion(term.c.x, term.c.y, term.c.x+n, term.c.y, 1);
 }
 
 void
@@ -1609,7 +1613,9 @@ tdeletechar(int n)
 	int dst, src, size;
 	Glyph *line;
 
-	LIMIT(n, 0, term.col - term.c.x);
+	if (n <= 0)
+		return;
+	n = MIN(n, term.col - 1 - term.c.x);
 
 	dst = term.c.x;
 	src = term.c.x + n;
@@ -1626,7 +1632,9 @@ tinsertblank(int n)
 	int dst, src, size;
 	Glyph *line;
 
-	LIMIT(n, 0, term.col - term.c.x);
+	if (n <= 0)
+		return;
+	n = MIN(n, term.col - 1 - term.c.x);
 
 	dst = term.c.x + n;
 	src = term.c.x;
@@ -1735,7 +1743,6 @@ tsetattr(const int *attr, int l)
 			term.c.attr.mode |= ATTR_UNDERLINE;
 			break;
 		case 5: /* slow blink */
-			/* FALLTHROUGH */
 		case 6: /* rapid blink */
 			term.c.attr.mode |= ATTR_BLINK;
 			break;
@@ -2047,18 +2054,17 @@ csihandle(void)
 		switch (csiescseq.arg[0]) {
 		case 0: /* below */
 			tclearregion(term.c.x, term.c.y, term.col-1, term.c.y, 1);
-			if (term.c.y < term.row-1) {
+			if (term.c.y < term.row-1)
 				tclearregion(0, term.c.y+1, term.col-1, term.row-1, 1);
-			}
 			break;
 		case 1: /* above */
-			if (term.c.y > 1)
+			if (term.c.y >= 1)
 				tclearregion(0, 0, term.col-1, term.c.y-1, 1);
 			tclearregion(0, term.c.y, term.c.x, term.c.y, 1);
 			break;
 		case 2: /* all */
 			if (IS_SET(MODE_ALTSCREEN)) {
-				tfullclear();
+				tclearregion(0, 0, term.col-1, term.row-1, 1);
 				break;
 			}
 			/* vte does this:
@@ -2109,8 +2115,7 @@ csihandle(void)
 		break;
 	case 'X': /* ECH -- Erase <n> char */
 		DEFAULT(csiescseq.arg[0], 1);
-		tclearregion(term.c.x, term.c.y,
-				term.c.x + csiescseq.arg[0] - 1, term.c.y, 1);
+		terasechar(csiescseq.arg[0]);
 		break;
 	case 'P': /* DCH -- Delete <n> char */
 		DEFAULT(csiescseq.arg[0], 1);
