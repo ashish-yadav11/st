@@ -257,8 +257,8 @@ static void selnormalize(void);
 static void selmove(int);
 static void selremove(void);
 static void selscroll(int, int, int);
-static void selsnap(int *, int *, int);
 static int regionselected(int, int, int, int);
+static void selsnap(int *, int *, int);
 
 static size_t utf8decode(const char *, Rune *, size_t);
 static Rune utf8decodebyte(char, size_t *);
@@ -601,17 +601,7 @@ regionselected(int x1, int y1, int x2, int y2)
 int
 selected(int x, int y)
 {
-	if (sel.ob.x == -1 || sel.mode == SEL_EMPTY ||
-	    sel.alt != IS_SET(MODE_ALTSCREEN))
-		return 0;
-
-	if (sel.type == SEL_RECTANGULAR)
-		return BETWEEN(y, sel.nb.y, sel.ne.y)
-		    && BETWEEN(x, sel.nb.x, sel.ne.x);
-
-	return BETWEEN(y, sel.nb.y, sel.ne.y)
-	    && (y != sel.nb.y || x >= sel.nb.x)
-	    && (y != sel.ne.y || x <= sel.ne.x);
+	return regionselected(x, y, x, y);
 }
 
 void
