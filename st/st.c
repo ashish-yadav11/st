@@ -2154,7 +2154,12 @@ csihandle(void)
 		case 22: /* push current title on stack */
 			switch (csiescseq.arg[1]) {
 			case 0:
+				xpushicontitle();
+				xpushtitle();
+				break;
 			case 1:
+				xpushicontitle();
+				break;
 			case 2:
 				xpushtitle();
 				break;
@@ -2165,7 +2170,12 @@ csihandle(void)
 		case 23: /* pop last title from stack */
 			switch (csiescseq.arg[1]) {
 			case 0:
+				xseticontitle(NULL, 1);
+				xsettitle(NULL, 1);
+				break;
 			case 1:
+				xseticontitle(NULL, 1);
+				break;
 			case 2:
 				xsettitle(NULL, 1);
 				break;
@@ -2224,7 +2234,15 @@ strhandle(void)
 		par = (narg = strescseq.narg) ? atoi(STRESCARGJUST(0)) : 0;
 		switch (par) {
 		case 0:
+			if (narg > 1) {
+				xseticontitle(STRESCARGREST(1), 0);
+				xsettitle(STRESCARGREST(1), 0);
+			}
+			return;
 		case 1:
+			if (narg > 1)
+				xseticontitle(STRESCARGREST(1), 0);
+			return;
 		case 2:
 			if (narg > 1)
 				xsettitle(STRESCARGREST(1), 0);
