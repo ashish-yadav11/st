@@ -1593,7 +1593,9 @@ xsetenv(void)
 void
 xfreetitlestack(void)
 {
-	for (int i = 0; i < LEN(titlestack); i++) {
+	int i;
+
+	for (i = 0; i < LEN(titlestack); i++) {
 		free(titlestack[i]);
 		titlestack[i] = NULL;
 	}

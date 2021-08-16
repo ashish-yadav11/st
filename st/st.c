@@ -2151,7 +2151,7 @@ csihandle(void)
 		break;
 	case 't': /* title stack operations */
 		switch (csiescseq.arg[0]) {
-		case 22: /* pust current title on stack */
+		case 22: /* push current title on stack */
 			switch (csiescseq.arg[1]) {
 			case 0:
 			case 1:
