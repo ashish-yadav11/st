@@ -2734,6 +2734,7 @@ eschandle(uchar ascii)
 	case 'c': /* RIS -- Reset to initial state */
 		treset();
 		if (resettitleonris) {
+			xfreeicontitlestack();
 			xfreetitlestack();
 			resettitle();
 		}
@@ -3215,6 +3216,7 @@ tresizealt(int col, int row)
 void
 resettitle(void)
 {
+	xseticontitle(NULL, 0);
 	xsettitle(NULL, 0);
 }
 
