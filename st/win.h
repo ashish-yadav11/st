@@ -23,6 +23,11 @@ enum win_mode {
 	                  |MODE_MOUSEMANY,
 };
 
+enum set_title {
+	TITLE_MAIN,
+	TITLE_ICON
+};
+
 void xbell(void);
 void xclipcopy(void);
 void xdrawcursor(int, int, Glyph, int, int, Glyph);
@@ -30,12 +35,9 @@ void xdrawline(Line, int, int, int);
 void xfinishdraw(void);
 void xloadcols(void);
 int xsetcolorname(int, const char *);
-void xfreeicontitlestack(void);
 void xfreetitlestack(void);
-void xseticontitle(char *, int);
-void xsettitle(char *, int);
-void xpushicontitle(void);
-void xpushtitle(void);
+void xsettitle(int, char *, int);
+void xpushtitle(int);
 int xsetcursor(int);
 void xsetmode(int, unsigned int);
 void xsetpointermotion(int);

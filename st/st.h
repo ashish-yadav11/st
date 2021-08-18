@@ -41,7 +41,7 @@ enum glyph_state {
 	GLYPH_EMPTY,
 	GLYPH_SET,
 	GLYPH_TAB,
-	GLYPH_TDUMMY,
+	GLYPH_TDUMMY
 };
 
 enum selection_mode {

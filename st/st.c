@@ -2154,14 +2154,14 @@ csihandle(void)
 		case 22: /* push current title on stack */
 			switch (csiescseq.arg[1]) {
 			case 0:
-				xpushicontitle();
-				xpushtitle();
+				xpushtitle(TITLE_ICON);
+				xpushtitle(TITLE_MAIN);
 				break;
 			case 1:
-				xpushicontitle();
+				xpushtitle(TITLE_ICON);
 				break;
 			case 2:
-				xpushtitle();
+				xpushtitle(TITLE_MAIN);
 				break;
 			default:
 				goto unknown;
@@ -2170,14 +2170,14 @@ csihandle(void)
 		case 23: /* pop last title from stack */
 			switch (csiescseq.arg[1]) {
 			case 0:
-				xseticontitle(NULL, 1);
-				xsettitle(NULL, 1);
+				xsettitle(TITLE_ICON, NULL, 1);
+				xsettitle(TITLE_MAIN, NULL, 1);
 				break;
 			case 1:
-				xseticontitle(NULL, 1);
+				xsettitle(TITLE_ICON, NULL, 1);
 				break;
 			case 2:
-				xsettitle(NULL, 1);
+				xsettitle(TITLE_MAIN, NULL, 1);
 				break;
 			default:
 				goto unknown;
@@ -2235,17 +2235,17 @@ strhandle(void)
 		switch (par) {
 		case 0:
 			if (narg > 1) {
-				xseticontitle(STRESCARGREST(1), 0);
-				xsettitle(STRESCARGREST(1), 0);
+				xsettitle(TITLE_ICON, STRESCARGREST(1), 0);
+				xsettitle(TITLE_MAIN, STRESCARGREST(1), 0);
 			}
 			return;
 		case 1:
 			if (narg > 1)
-				xseticontitle(STRESCARGREST(1), 0);
+				xsettitle(TITLE_ICON, STRESCARGREST(1), 0);
 			return;
 		case 2:
 			if (narg > 1)
-				xsettitle(STRESCARGREST(1), 0);
+				xsettitle(TITLE_MAIN, STRESCARGREST(1), 0);
 			return;
 		case 7:
 			if (narg > 1)
@@ -2285,7 +2285,7 @@ strhandle(void)
 		}
 		break;
 	case 'k': /* old title set compatibility */
-		xsettitle(strescseq.buf, 0);
+		xsettitle(TITLE_MAIN, strescseq.buf, 0);
 		return;
 	case 'P': /* DCS -- Device Control String */
 	case '_': /* APC -- Application Program Command */
@@ -2734,7 +2734,6 @@ eschandle(uchar ascii)
 	case 'c': /* RIS -- Reset to initial state */
 		treset();
 		if (resettitleonris) {
-			xfreeicontitlestack();
 			xfreetitlestack();
 			resettitle();
 		}
@@ -3075,7 +3074,7 @@ rscrolldown(int n)
 		term.line[i] = term.line[i-n];
 		term.line[i-n] = temp;
 	}
-	for (/* i = n - 1 */; i >= 0; i--) {
+	for (/*i = n - 1 */; i >= 0; i--) {
 		temp = term.line[i];
 		term.line[i] = term.hist[term.histi];
 		term.hist[term.histi] = temp;
@@ -3193,7 +3192,7 @@ tresizealt(int col, int row)
 			tclearglyph(&term.line[i][j], 0);
 	}
 	/* allocate any new rows */
-	for (/* i = MIN(row, term.row) */; i < row; i++) {
+	for (/*i = MIN(row, term.row) */; i < row; i++) {
 		term.line[i] = xmalloc(col * sizeof(Glyph));
 		for (j = 0; j < col; j++)
 			tclearglyph(&term.line[i][j], 0);
@@ -3216,8 +3215,8 @@ tresizealt(int col, int row)
 void
 resettitle(void)
 {
-	xseticontitle(NULL, 0);
-	xsettitle(NULL, 0);
+	xsettitle(TITLE_ICON, NULL, 0);
+	xsettitle(TITLE_MAIN, NULL, 0);
 }
 
 void

@@ -225,10 +225,8 @@ static DC dc;
 static XWindow xw;
 static XSelection xsel;
 static TermWindow win;
-static int istki; /* icon title stack index */
-static int tstki; /* title stack index */
-static char *iconstack[TITLESTACKSIZE]; /* icon title stack */
-static char *titlestack[TITLESTACKSIZE]; /* title stack */
+static int tstki[2]; /* title and icon title stack indices */
+static char *titlestack[2][TITLESTACKSIZE]; /* title and icon title stack */
 
 /* Font Ring Cache */
 enum {
@@ -1594,87 +1592,56 @@ xsetenv(void)
 }
 
 void
-xfreeicontitlestack(void)
-{
-	for (int i = 0; i < LEN(iconstack); i++) {
-		free(iconstack[i]);
-		iconstack[i] = NULL;
-	}
-}
-
-void
 xfreetitlestack(void)
 {
 	for (int i = 0; i < LEN(titlestack); i++) {
-		free(titlestack[i]);
-		titlestack[i] = NULL;
+		free(titlestack[0][i]);
+		free(titlestack[1][i]);
+		titlestack[0][i] = NULL;
+		titlestack[1][i] = NULL;
 	}
 }
 
 void
-xseticontitle(char *p, int pop)
+xsettitle(int i, char *p, int pop)
 {
+	int *pstki = &tstki[i];
+	char *(*pstack)[] = &titlestack[i];
 	XTextProperty prop;
 
-	free(iconstack[istki]);
+	free((*pstack)[*pstki]);
 	if (pop) {
-		iconstack[istki] = NULL;
-		istki = (istki - 1 + TITLESTACKSIZE) % TITLESTACKSIZE;
-		p = iconstack[istki] ? iconstack[istki] : opt_title;
+		(*pstack)[*pstki] = NULL;
+		*pstki = (*pstki - 1 + TITLESTACKSIZE) % TITLESTACKSIZE;
+		p = (*pstack)[*pstki] ? (*pstack)[*pstki] : opt_title;
 	} else if (p) {
-		iconstack[istki] = xstrdup(p);
+		(*pstack)[*pstki] = xstrdup(p);
 	} else {
-		iconstack[istki] = NULL;
+		(*pstack)[*pstki] = NULL;
 		p = opt_title;
 	}
 
 	Xutf8TextListToTextProperty(xw.dpy, &p, 1, XUTF8StringStyle, &prop);
-	XSetWMIconName(xw.dpy, xw.win, &prop);
-	XSetTextProperty(xw.dpy, xw.win, &prop, xw.netwmiconname);
-	XFree(prop.value);
-}
-
-void
-xsettitle(char *p, int pop)
-{
-	XTextProperty prop;
-
-	free(titlestack[tstki]);
-	if (pop) {
-		titlestack[tstki] = NULL;
-		tstki = (tstki - 1 + TITLESTACKSIZE) % TITLESTACKSIZE;
-		p = titlestack[tstki] ? titlestack[tstki] : opt_title;
-	} else if (p) {
-		titlestack[tstki] = xstrdup(p);
-	} else {
-		titlestack[tstki] = NULL;
-		p = opt_title;
+	if (i == TITLE_MAIN) {
+		XSetWMName(xw.dpy, xw.win, &prop);
+		XSetTextProperty(xw.dpy, xw.win, &prop, xw.netwmname);
+	} else/* if (i == TITLE_ICON)*/ {
+		XSetWMIconName(xw.dpy, xw.win, &prop);
+		XSetTextProperty(xw.dpy, xw.win, &prop, xw.netwmiconname);
 	}
-
-	Xutf8TextListToTextProperty(xw.dpy, &p, 1, XUTF8StringStyle, &prop);
-	XSetWMName(xw.dpy, xw.win, &prop);
-	XSetTextProperty(xw.dpy, xw.win, &prop, xw.netwmname);
 	XFree(prop.value);
 }
 
 void
-xpushicontitle(void)
+xpushtitle(int i)
 {
-	int istkin = (istki + 1) % TITLESTACKSIZE;
+	int *pstki = &tstki[i];
+	char *(*pstack)[] = &titlestack[i];
+	int stkin = (*pstki + 1) % TITLESTACKSIZE;
 
-	free(iconstack[istkin]);
-	iconstack[istkin] = iconstack[istki] ? xstrdup(iconstack[istki]) : NULL;
-	istki = istkin;
-}
-
-void
-xpushtitle(void)
-{
-	int tstkin = (tstki + 1) % TITLESTACKSIZE;
-
-	free(titlestack[tstkin]);
-	titlestack[tstkin] = titlestack[tstki] ? xstrdup(titlestack[tstki]) : NULL;
-	tstki = tstkin;
+	free((*pstack)[stkin]);
+	(*pstack)[stkin] = (*pstack)[*pstki] ? xstrdup((*pstack)[*pstki]) : NULL;
+	*pstki = stkin;
 }
 
 int
