@@ -2095,7 +2095,7 @@ csihandle(void)
 		if (csiescseq.arg[0] < 0)
 			return;
 		DEFAULT(csiescseq.arg[0], 1);
-		x = MIN(term.c.x + csiescseq.arg[0], term.col - 1);
+		x = MIN(term.c.x + csiescseq.arg[0], term.col) - 1;
 		tclearregion(term.c.x, term.c.y, x, term.c.y, 1);
 		break;
 	case 'P': /* DCH -- Delete <n> char */
