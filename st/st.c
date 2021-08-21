@@ -40,7 +40,7 @@
 #define STR_BUF_SIZ   ESC_BUF_SIZ
 #define STR_ARG_SIZ   ESC_ARG_SIZ
 #define HISTSIZE      2000
-#define RESIZEBUF     1000
+#define RESIZEBUFFER  1000
 
 /* macros */
 #define IS_SET(flag)		((term.mode & (flag)) != 0)
@@ -2954,8 +2954,8 @@ treflow(int col, int row)
 		/* each line can take this many lines after reflow */
 		j = (term.col + col - 1) / col;
 		nlines = j * nlines;
-		if (nlines > HISTSIZE + RESIZEBUF + row) {
-			nlines = HISTSIZE + RESIZEBUF + row;
+		if (nlines > HISTSIZE + RESIZEBUFFER + row) {
+			nlines = HISTSIZE + RESIZEBUFFER + row;
 			oy = -(nlines / j - oce - 1);
 		}
 	}
