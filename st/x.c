@@ -1614,7 +1614,9 @@ xsettitle(int i, char *p, int pop)
 		p = opt_title;
 	}
 
-	Xutf8TextListToTextProperty(xw.dpy, &p, 1, XUTF8StringStyle, &prop);
+	if (Xutf8TextListToTextProperty(xw.dpy, &p, 1, XUTF8StringStyle,
+	                                &prop) != Success)
+		return;
 	if (i == TITLE_MAIN) {
 		XSetWMName(xw.dpy, xw.win, &prop);
 		XSetTextProperty(xw.dpy, xw.win, &prop, xw.netwmname);
