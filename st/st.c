@@ -891,25 +891,20 @@ externalpipe(const Arg *arg)
 	signal(SIGPIPE, psigpipe);
 }
 
+/* FIXME: in die, vfprintf and exit are not async-signal-safe */
 void
 sigchld(int a)
 {
-	int stat, tmp;
+	int stat, tmp = errno;
 	pid_t p;
 
-	tmp = errno; /* waitpid might change errno */
-	while ((p = waitpid(-1, &stat, WNOHANG)) > 0)
-		if (p == pid)
-			goto check;
-	errno = tmp;
-
-	/* TODO: in die, printf and exit are not async-signal-safe */
-	if ((p = waitpid(pid, &stat, WNOHANG)) < 0)
+	while ((p = waitpid(-1, &stat, WNOHANG)) > 0 && p != pid);
+	if (p != pid && (p = waitpid(pid, &stat, WNOHANG)) < 0)
 		die("waiting for pid %hd failed: %s\n", pid, strerror(errno));
-
-	if (pid != p)
+	if (p != pid) {
+		errno = tmp;
 		return;
-check:
+	}
 	if (WIFEXITED(stat) && WEXITSTATUS(stat)) {
 		die("child exited with status %d\n", WEXITSTATUS(stat));
 	} else if (WIFSIGNALED(stat)) {
