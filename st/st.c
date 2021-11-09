@@ -1181,7 +1181,8 @@ tsetdirtattr(int attr)
 void
 tfulldirt(void)
 {
-	memset(term.dirty, 1, term.row * sizeof(*term.dirty));
+	for (int i = 0; i < term.row; i++)
+		term.dirty[i] = 1;
 }
 
 void
