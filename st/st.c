@@ -2991,7 +2991,7 @@ treflow(int col, int row)
 		} else/* if (col - nx < len - ox) */ {
 			memcpy(&buf[ny][nx], &line[ox], (col-nx) * sizeof(Glyph));
 			for (ox += col - nx; ox < len &&
-			                     line[ox].mode == GLYPH_TDUMMY; ox++);
+			                     line[ox].state == GLYPH_TDUMMY; ox++);
 			if (ox == len) {
 				ox = 0, oy++;
 			} else {
