@@ -2493,6 +2493,14 @@ twritetab(void)
 {
 	int x = term.c.x, y = term.c.y;
 
+	/* possibly best, yet not perfect, hack to not "writetab"
+	 * when tab was intended only for cursor movement */
+	for (++x; x < term.col && !term.tabs[x]; x++)
+		if (term.line[y][x].state != GLYPH_EMPTY) {
+			while (++x < term.col && !term.tabs[x]);
+			goto end;
+		}
+
 	/* selected() takes relative coordinates */
 	if (selected(x + term.scr, y + term.scr))
 		selclear();
@@ -2504,7 +2512,7 @@ twritetab(void)
 		term.line[y][x].u = ' ';
 		term.line[y][x].state = GLYPH_TDUMMY;
 	}
-
+end:
 	term.c.x = MIN(x, term.col-1);
 }
 
