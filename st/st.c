@@ -2495,7 +2495,7 @@ twritetab(void)
 
 	/* possibly best, yet not perfect, hack to not "writetab"
 	 * when tab was intended only for cursor movement */
-	for (++x; x < term.col && !term.tabs[x]; x++)
+	while (++x < term.col && !term.tabs[x])
 		if (term.line[y][x].state != GLYPH_EMPTY) {
 			while (++x < term.col && !term.tabs[x]);
 			goto end;
