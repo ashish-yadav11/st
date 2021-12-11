@@ -217,7 +217,8 @@ static void tinsertblank(int);
 static void tinsertblankline(int);
 static int tlinelen(Line line);
 static int tiswrapped(Line line);
-static char *tgetline(char *, const Glyph *, const Glyph *, int);
+static char *tgetglyphs(char *, const Glyph *, const Glyph *, int);
+static size_t tgetline(char *, const Glyph *, int);
 static void tmoveto(int, int);
 static void tmoveato(int, int);
 static void tnewline(int);
@@ -483,18 +484,32 @@ tiswrapped(Line line)
 }
 
 char *
-tgetline(char *buf, const Glyph *gp, const Glyph *last, int gettab)
+tgetglyphs(char *buf, const Glyph *gp, const Glyph *lgp, int gettab)
 {
-	while (gp <= last)
+	while (gp <= lgp)
 		if (gp->mode & ATTR_WDUMMY) {
 			gp++;
 		} else if (gettab && gp->state == GLYPH_TAB) {
 			*(buf++) = '\t';
-			while (++gp <= last && gp->state == GLYPH_TDUMMY);
+			while (++gp <= lgp && gp->state == GLYPH_TDUMMY);
 		} else {
 			buf += utf8encode((gp++)->u, buf);
 		}
 	return buf;
+}
+
+size_t
+tgetline(char *buf, const Glyph *fgp, int gettab)
+{
+	char *ptr;
+	const Glyph *lgp = &fgp[term.col - 1];
+
+	while (lgp > fgp && lgp->u == ' ')
+		lgp--;
+	ptr = tgetglyphs(buf, fgp, lgp, gettab);
+	if (!(lgp->mode & ATTR_WRAP))
+		*(ptr++) = '\n';
+	return ptr - buf;
 }
 
 void
@@ -682,7 +697,7 @@ getsel(void)
 {
 	char *str, *ptr;
 	int y, lastx, linelen;
-	const Glyph *gp, *last;
+	const Glyph *gp, *lgp;
 
 	if (sel.ob.x == -1 || sel.alt != IS_SET(MODE_ALTSCREEN))
 		return NULL;
@@ -706,9 +721,9 @@ getsel(void)
 			gp = &line[sel.nb.y == y ? sel.nb.x : 0];
 			lastx = (sel.ne.y == y) ? sel.ne.x : term.col-1;
 		}
-		last = &line[MIN(lastx, linelen-1)];
+		lgp = &line[MIN(lastx, linelen-1)];
 
-		ptr = tgetline(ptr, gp, last, sel.type != SEL_RECTANGULAR);
+		ptr = tgetglyphs(ptr, gp, lgp, sel.type != SEL_RECTANGULAR);
 		/*
 		 * Copy and pasting of line endings is inconsistent
 		 * in the inconsistent terminal and GUI world.
@@ -719,7 +734,7 @@ getsel(void)
 		 * FIXME: Fix the computer world.
 		 */
 		if ((y < sel.ne.y || lastx >= linelen) &&
-		    (!(last->mode & ATTR_WRAP) || sel.type == SEL_RECTANGULAR))
+		    (!(lgp->mode & ATTR_WRAP) || sel.type == SEL_RECTANGULAR))
 			*ptr++ = '\n';
 	}
 	*ptr = '\0';
@@ -834,9 +849,7 @@ externalpipe(const Arg *arg)
 	int fd[2];
 	int y, m;
 	char str[(term.col + 1) * UTF_SIZ];
-	char *ptr;
 	void (*psigpipe)(int);
-	const Glyph *gp, *last;
 	const ExternalPipe *ep = arg->v;
 
 	if (pipe(fd) == -1)
@@ -874,16 +887,7 @@ externalpipe(const Arg *arg)
 	for (m = term.row - 1; m >= 0 && tlinelen(term.line[m]) == 0; m--);
 
 	for (; y <= m; y++) {
-		gp = &TLINEABS(y)[0];
-		last = &gp[term.col - 1];
-		while (last > gp && last->state == GLYPH_EMPTY)
-			last--;
-
-		ptr = tgetline(str, gp, last, 1);
-		if (!(last->mode & ATTR_WRAP))
-			*(ptr++) = '\n';
-
-		if (xwrite(fd[1], str, ptr-str) < 0)
+		if (xwrite(fd[1], str, tgetline(str, &TLINEABS(y)[0], 1)) < 0)
 			break;
 	}
 	close(fd[1]);
@@ -2454,19 +2458,8 @@ void
 tdumpline(int n)
 {
 	char str[(term.col + 1) * UTF_SIZ];
-	char *ptr;
-	const Glyph *gp, *last;
 
-	gp = &term.line[n][0];
-	last = &gp[term.col - 1];
-	while (last > gp && last->state == GLYPH_EMPTY)
-		last--;
-
-	ptr = tgetline(str, gp, last, 1);
-	if (!(last->mode & ATTR_WRAP))
-		*(ptr++) = '\n';
-
-	tprinter(str, ptr-str);
+	tprinter(str, tgetline(str, &term.line[n][0], 1));
 }
 
 void
