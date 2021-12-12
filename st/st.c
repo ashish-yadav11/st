@@ -2500,6 +2500,7 @@ twritetab(void)
 			while (++x < term.col && !term.tabs[x]);
 			goto end;
 		}
+	x = term.c.x;
 
 	/* selected() takes relative coordinates */
 	if (selected(x + term.scr, y + term.scr))
