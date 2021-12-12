@@ -2495,11 +2495,13 @@ twritetab(void)
 
 	/* possibly best, yet not perfect, hack to not "writetab"
 	 * when tab was intended only for cursor movement */
-	while (++x < term.col && !term.tabs[x])
+	do {
 		if (term.line[y][x].state != GLYPH_EMPTY) {
 			while (++x < term.col && !term.tabs[x]);
 			goto end;
 		}
+	} while (++x < term.col && !term.tabs[x]);
+
 	x = term.c.x;
 
 	/* selected() takes relative coordinates */
