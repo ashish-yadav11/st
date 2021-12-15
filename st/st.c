@@ -1214,6 +1214,7 @@ void
 treset(void)
 {
 	uint i;
+	int x, y;
 
 	tresetcursor();
 	memset(term.tabs, 0, term.col * sizeof(*term.tabs));
@@ -1226,12 +1227,15 @@ treset(void)
 	term.mode = MODE_WRAP|MODE_UTF8;
 	memset(term.trantbl, CS_USA, sizeof(term.trantbl));
 	term.charset = 0;
-
+	selremove();
 	for (i = 0; i < 2; i++) {
-		tcursor(CURSOR_SAVE);
-		tclearregion(0, 0, term.col-1, term.row-1, 0);
+		tcursor(CURSOR_SAVE); /* reset saved cursor */
+		for (y = 0; y < term.row; y++)
+			for (x = 0; x < term.col; x++)
+				tclearglyph(&term.line[y][x], 0);
 		tswapscreen();
 	}
+	tfulldirt();
 }
 
 void
@@ -1253,12 +1257,13 @@ tinit(int col, int row)
 	treset();
 }
 
+/* handle it with care */
 void
 tswapscreen(void)
 {
 	static Line *altline;
-	Line *tmpline = term.line;
 	static int altcol, altrow;
+	Line *tmpline = term.line;
 	int tmpcol = term.col, tmprow = term.row;
 
 	term.line = altline;
