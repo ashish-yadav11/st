@@ -2878,6 +2878,7 @@ check_control_code:
 
 	gp = &term.line[term.c.y][term.c.x];
 	if (IS_SET(MODE_WRAP) && (term.c.state & CURSOR_WRAPNEXT)) {
+		gp->state = GLYPH_SET;
 		gp->mode |= ATTR_WRAP;
 		tnewline(1);
 		gp = &term.line[term.c.y][term.c.x];
@@ -2990,7 +2991,7 @@ treflow(int col, int row)
 				for (j = nx; j < col; j++)
 					tclearglyph(&buf[ny][j], 0);
 				nx = 0;
-			} else {
+			} else if (nx > 0) {
 				buf[ny][nx - 1].mode &= ~ATTR_WRAP;
 			}
 			ox = 0, oy++;
@@ -3004,6 +3005,7 @@ treflow(int col, int row)
 			if (ox == len) {
 				ox = 0, oy++;
 			} else {
+				buf[ny][col - 1].state = GLYPH_SET;
 				buf[ny][col - 1].mode |= ATTR_WRAP;
 			}
 			nx = 0;
