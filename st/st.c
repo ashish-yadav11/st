@@ -586,9 +586,11 @@ selnormalize(void)
 	i = tlinelen(line);
 	if (sel.nb.x > i)
 		sel.nb.x = i;
-	while (sel.nb.x > 0 && line[sel.nb.x].state == GLYPH_TDUMMY)
-		if (line[sel.nb.x-1].state >= GLYPH_TAB)
+	while (sel.nb.x > 0 && line[sel.nb.x].state == GLYPH_TDUMMY &&
+	       (line[sel.nb.x-1].state == GLYPH_TDUMMY ||
+	        line[sel.nb.x-1].state == GLYPH_TAB)) {
 			sel.nb.x--;
+	}
 
 	line = TLINE(sel.ne.y);
 	i = tlinelen(line) - 1;
@@ -596,9 +598,11 @@ selnormalize(void)
 		sel.ne.x = term.col - 1;
 		return;
 	}
-	if (line[sel.ne.x].state >= GLYPH_TAB)
+	if (line[sel.ne.x].state == GLYPH_TAB ||
+	    line[sel.ne.x].state == GLYPH_TDUMMY) {
 		while (sel.ne.x < i && line[sel.ne.x+1].state == GLYPH_TDUMMY)
 			sel.ne.x++;
+	}
 }
 
 int
