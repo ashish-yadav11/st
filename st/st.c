@@ -504,7 +504,7 @@ tgetline(char *buf, const Glyph *fgp, int gettab)
 	char *ptr;
 	const Glyph *lgp = &fgp[term.col - 1];
 
-	while (lgp > fgp && lgp->u == ' ')
+	while (lgp > fgp && lgp->state == GLYPH_EMPTY)
 		lgp--;
 	ptr = tgetglyphs(buf, fgp, lgp, gettab);
 	if (!(lgp->mode & ATTR_WRAP))
