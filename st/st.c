@@ -48,7 +48,7 @@
 #define ISCONTROLC1(c)		(BETWEEN(c, 0x80, 0x9f))
 #define ISCONTROL(c)		(ISCONTROLC0(c) || ISCONTROLC1(c))
 #define ISDELIM(u)		(u && wcschr(worddelimiters, u))
-#define ISSPACE(gp)		(gp->u == ' ' && gp->state == GLYPH_SET)
+#define ISSPACE(gp)		(gp->u == ' ' && (gp->mode & ATTR_SET))
 #define STRESCARGREST(n)	((n) == 0 ? strescseq.buf : strescseq.argp[(n)-1] + 1)
 #define STRESCARGJUST(n)	(*(strescseq.argp[n]) = '\0', STRESCARGREST(n))
 
@@ -471,7 +471,7 @@ tlinelen(Line line)
 {
 	int i = term.col - 1;
 
-	for (; i >= 0 && line[i].state == GLYPH_EMPTY; i--);
+	for (; i >= 0 && !(line[i].mode & ATTR_NONEMPTY); i--);
 	return i + 1;
 }
 
@@ -489,9 +489,9 @@ tgetglyphs(char *buf, const Glyph *gp, const Glyph *lgp, int gettab)
 	while (gp <= lgp)
 		if (gp->mode & ATTR_WDUMMY) {
 			gp++;
-		} else if (gettab && gp->state == GLYPH_TAB) {
+		} else if (gettab && (gp->mode & ATTR_TAB)) {
 			*(buf++) = '\t';
-			while (++gp <= lgp && gp->state == GLYPH_TDUMMY);
+			while (++gp <= lgp && (gp->mode & ATTR_TDUMMY));
 		} else {
 			buf += utf8encode((gp++)->u, buf);
 		}
@@ -504,7 +504,7 @@ tgetline(char *buf, const Glyph *fgp, int gettab)
 	char *ptr;
 	const Glyph *lgp = &fgp[term.col - 1];
 
-	while (lgp > fgp && lgp->state == GLYPH_EMPTY)
+	while (lgp > fgp && !(lgp->mode & ATTR_NONEMPTY))
 		lgp--;
 	ptr = tgetglyphs(buf, fgp, lgp, gettab);
 	if (!(lgp->mode & ATTR_WRAP))
@@ -586,10 +586,9 @@ selnormalize(void)
 	i = tlinelen(line);
 	if (sel.nb.x > i)
 		sel.nb.x = i;
-	while (sel.nb.x > 0 && line[sel.nb.x].state == GLYPH_TDUMMY &&
-	       (line[sel.nb.x-1].state == GLYPH_TDUMMY ||
-	        line[sel.nb.x-1].state == GLYPH_TAB)) {
-			sel.nb.x--;
+	while (sel.nb.x > 0 && (line[sel.nb.x].mode & ATTR_TDUMMY) &&
+	       (line[sel.nb.x-1].mode & (ATTR_TDUMMY | ATTR_TAB))) {
+		sel.nb.x--;
 	}
 
 	line = TLINE(sel.ne.y);
@@ -598,11 +597,9 @@ selnormalize(void)
 		sel.ne.x = term.col - 1;
 		return;
 	}
-	if (line[sel.ne.x].state == GLYPH_TAB ||
-	    line[sel.ne.x].state == GLYPH_TDUMMY) {
-		while (sel.ne.x < i && line[sel.ne.x+1].state == GLYPH_TDUMMY)
+	if (line[sel.ne.x].mode & (ATTR_TAB | ATTR_TDUMMY))
+		while (sel.ne.x < i && (line[sel.ne.x+1].mode & ATTR_TDUMMY))
 			sel.ne.x++;
-	}
 }
 
 int
@@ -1562,7 +1559,7 @@ tsetchar(Rune u, const Glyph *attr, int x, int y)
 	term.dirty[y] = 1;
 	term.line[y][x] = *attr;
 	term.line[y][x].u = u;
-	term.line[y][x].state = GLYPH_SET;
+	term.line[y][x].mode |= ATTR_SET;
 }
 
 void
@@ -1576,7 +1573,6 @@ tclearglyph(Glyph *gp, int usecurattr)
 		gp->bg = defaultbg;
 	}
 	gp->mode = ATTR_NULL;
-	gp->state = GLYPH_EMPTY;
 	gp->u = ' ';
 }
 
@@ -2505,7 +2501,7 @@ twritetab(void)
 	/* possibly best, yet not perfect, hack to not "writetab"
 	 * when tab was intended only for cursor movement */
 	do {
-		if (term.line[y][x].state != GLYPH_EMPTY) {
+		if (term.line[y][x].mode & ATTR_NONEMPTY) {
 			while (++x < term.col && !term.tabs[x]);
 			goto end;
 		}
@@ -2518,11 +2514,11 @@ twritetab(void)
 		selclear();
 
 	term.line[y][x].u = ' ';
-	term.line[y][x].state = GLYPH_TAB;
+	term.line[y][x].mode |= ATTR_TAB;
 
 	while (++x < term.col && !term.tabs[x]) {
 		term.line[y][x].u = ' ';
-		term.line[y][x].state = GLYPH_TDUMMY;
+		term.line[y][x].mode |= ATTR_TDUMMY;
 	}
 end:
 	term.c.x = MIN(x, term.col-1);
@@ -2882,7 +2878,6 @@ check_control_code:
 
 	gp = &term.line[term.c.y][term.c.x];
 	if (IS_SET(MODE_WRAP) && (term.c.state & CURSOR_WRAPNEXT)) {
-		gp->state = GLYPH_SET;
 		gp->mode |= ATTR_WRAP;
 		tnewline(1);
 		gp = &term.line[term.c.y][term.c.x];
@@ -3005,11 +3000,10 @@ treflow(int col, int row)
 		} else/* if (col - nx < len - ox) */ {
 			memcpy(&buf[ny][nx], &line[ox], (col-nx) * sizeof(Glyph));
 			for (ox += col - nx; ox < len &&
-			                     line[ox].state == GLYPH_TDUMMY; ox++);
+			                     (line[ox].mode & ATTR_TDUMMY); ox++);
 			if (ox == len) {
 				ox = 0, oy++;
 			} else {
-				buf[ny][col - 1].state = GLYPH_SET;
 				buf[ny][col - 1].mode |= ATTR_WRAP;
 			}
 			nx = 0;

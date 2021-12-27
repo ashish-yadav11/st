@@ -22,26 +22,23 @@
 
 enum glyph_attribute {
 	ATTR_NULL       = 0,
-	ATTR_BOLD       = 1 << 0,
-	ATTR_FAINT      = 1 << 1,
-	ATTR_ITALIC     = 1 << 2,
-	ATTR_UNDERLINE  = 1 << 3,
-	ATTR_BLINK      = 1 << 4,
-	ATTR_REVERSE    = 1 << 5,
-	ATTR_INVISIBLE  = 1 << 6,
-	ATTR_STRUCK     = 1 << 7,
-	ATTR_WRAP       = 1 << 8,
-	ATTR_WIDE       = 1 << 9,
-	ATTR_WDUMMY     = 1 << 10,
-	ATTR_SELECTED   = 1 << 11,
+	ATTR_SET        = 1 << 0,
+	ATTR_BOLD       = 1 << 1,
+	ATTR_FAINT      = 1 << 2,
+	ATTR_ITALIC     = 1 << 3,
+	ATTR_UNDERLINE  = 1 << 4,
+	ATTR_BLINK      = 1 << 5,
+	ATTR_REVERSE    = 1 << 6,
+	ATTR_INVISIBLE  = 1 << 7,
+	ATTR_STRUCK     = 1 << 8,
+	ATTR_WRAP       = 1 << 9,
+	ATTR_WIDE       = 1 << 10,
+	ATTR_WDUMMY     = 1 << 11,
+	ATTR_SELECTED   = 1 << 12,
+	ATTR_TAB        = 1 << 13,
+	ATTR_TDUMMY     = 1 << 14,
 	ATTR_BOLD_FAINT = ATTR_BOLD | ATTR_FAINT,
-};
-
-enum glyph_state {
-	GLYPH_EMPTY,
-	GLYPH_SET,
-	GLYPH_TAB,
-	GLYPH_TDUMMY
+	ATTR_NONEMPTY   = ATTR_SET | ATTR_WRAP | ATTR_TAB | ATTR_TDUMMY,
 };
 
 enum selection_mode {
@@ -71,7 +68,6 @@ typedef uint_least32_t Rune;
 typedef struct {
 	Rune u;           /* character code */
 	ushort mode;      /* attribute flags */
-	ushort state;     /* state flags */
 	uint32_t fg;      /* foreground  */
 	uint32_t bg;      /* background  */
 } Glyph;
