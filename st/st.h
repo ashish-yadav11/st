@@ -35,10 +35,7 @@ enum glyph_attribute {
 	ATTR_WIDE       = 1 << 10,
 	ATTR_WDUMMY     = 1 << 11,
 	ATTR_SELECTED   = 1 << 12,
-	ATTR_TAB        = 1 << 13,
-	ATTR_TDUMMY     = 1 << 14,
 	ATTR_BOLD_FAINT = ATTR_BOLD | ATTR_FAINT,
-	ATTR_NONEMPTY   = ATTR_SET | ATTR_WRAP | ATTR_TAB | ATTR_TDUMMY,
 };
 
 enum selection_mode {
