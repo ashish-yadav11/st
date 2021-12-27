@@ -1528,6 +1528,7 @@ tmoveto(int x, int y)
 void
 tsetchar(Rune u, const Glyph *attr, int x, int y)
 {
+	int i;
 	static const char *vt100_0[62] = { /* 0x41 - 0x7e */
 		"↑", "↓", "→", "←", "█", "▚", "☃", /* A - G */
 		0, 0, 0, 0, 0, 0, 0, 0, /* H - O */
@@ -1554,6 +1555,10 @@ tsetchar(Rune u, const Glyph *attr, int x, int y)
 	} else if (term.line[y][x].mode & ATTR_WDUMMY) {
 		term.line[y][x-1].u = ' ';
 		term.line[y][x-1].mode &= ~ATTR_WIDE;
+	} else if (term.line[y][x].mode & (ATTR_TAB | ATTR_TDUMMY)) {
+		i = x;
+		while (++i < term.col && (term.line[y][i].mode & ATTR_TDUMMY))
+			term.line[y][i].mode &= ~ATTR_TDUMMY;
 	}
 
 	term.dirty[y] = 1;
