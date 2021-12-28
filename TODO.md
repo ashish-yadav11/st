@@ -1,3 +1,5 @@
+* write a proper README
+
 * optimize scrolling by using one single linear array for both hist buffer and
   term.line?
 
