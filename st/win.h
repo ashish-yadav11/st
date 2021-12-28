@@ -34,6 +34,7 @@ void xdrawcursor(int, int, Glyph, int, int, Glyph);
 void xdrawline(Line, int, int, int);
 void xfinishdraw(void);
 void xloadcols(void);
+int xgetcolor(int, unsigned char *, unsigned char *, unsigned char *);
 int xsetcolorname(int, const char *);
 void xfreetitlestack(void);
 void xsettitle(int, char *, int);
