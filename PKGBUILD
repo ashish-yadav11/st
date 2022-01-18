@@ -12,7 +12,7 @@ depends=(libxft)
 optdepends=('neovim: required by st-pager'
             'perl: required by st-plumber'
             'perl-regexp-common: required by st-plumber'
-            'xdg-uitls: xdg-open required by st-pluber'
+            'xdg-utils: xdg-open required by st-pluber'
             'libnotify: required by st-plumber')
 provides=(st)
 conflicts=(st)
