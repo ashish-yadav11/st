@@ -5,7 +5,7 @@ open() {
     exec setsid -f xdg-open "$1"
 }
 
-[ -f "$1" ] && open "$1"
+{ [ -f "$1" ] || [ -d "$1" ] ;} && open "$1"
 
 url="$(echo "$1" | perl -M'Regexp::Common=URI' -ne 'if (/($RE{URI})/) {print $1; exit}')"
 [ -n "$url" ] && open "$url"
