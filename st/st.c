@@ -39,7 +39,7 @@
 #define ESC_ARG_SIZ   16
 #define STR_BUF_SIZ   ESC_BUF_SIZ
 #define STR_ARG_SIZ   ESC_ARG_SIZ
-#define HISTSIZE      10000
+#define HISTSIZE      2000
 #define RESIZEBUFFER  (HISTSIZE / 2)
 
 /* macros */
