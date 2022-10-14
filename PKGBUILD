@@ -2,7 +2,7 @@
 
 pkgname=st-cust
 _pkgname=st
-pkgver=0.8.5
+pkgver=0.9
 pkgrel=1
 pkgdesc="Simple terminal implementation for X"
 arch=(i686 x86_64)
