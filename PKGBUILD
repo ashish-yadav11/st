@@ -21,18 +21,17 @@ source=("$_pkgname.tar.gz"
         "$_pkgname.desktop")
 sha256sums=(SKIP
             SKIP)
+_sourcedir="$_pkgname"
 
 build() {
-    cd "$srcdir/$_pkgname"
-    make
+    make -C "$_sourcedir"
+    make -C "$_sourcedir" installinfo
 }
 
 package() {
-    cd "$srcdir/$_pkgname"
-    make PREFIX=/usr DESTDIR="$pkgdir" install
-    install -m755 -D st-pager "$pkgdir/usr/bin/st-pager"
-    install -m755 -D st-plumber "$pkgdir/usr/bin/st-plumber"
-    install -m644 -D LICENSE "$pkgdir/usr/share/doc/$_pkgname/LICENSE"
-    install -m644 -D README "$pkgdir/usr/share/doc/$_pkgname/README"
-    install -m644 -D "$srcdir/$_pkgname.desktop" "$pkgdir/usr/share/applications/$_pkgname.desktop"
+    make -C "$_sourcedir" PREFIX=/usr DESTDIR="$pkgdir" installwoinfo
+    install -m755 -D -t "$pkgdir/usr/bin" "$_sourcedir/st-pager" "$_sourcedir/st-plumber"
+    install -m644 -D -t "$pkgdir/usr/share/licenses/$_pkgname" "$_sourcedir/LICENSE"
+    install -m644 -D -t "$pkgdir/usr/share/doc/$_pkgname" "$_sourcedir/README"
+    install -m644 -D -t "$pkgdir/usr/share/applications" "$_pkgname.desktop"
 }
