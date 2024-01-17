@@ -201,15 +201,17 @@ static ExternalPipe pager = { .histlines = -1, .cmd = (char *const[]){ "st-pager
 /* Internal keyboard shortcuts. */
 static Shortcut shortcuts[] = {
 	/* mask                 keysym          function        argument */
-	{ XK_ANY_MOD,           XK_Break,       sendbreak,      {.i =  0} },
+	{ XK_ANY_MOD,           XK_Break,       sendbreak,      {0} },
 	{ TERMMOD,              XK_plus,        zoom,           {.f = +1} },
 	{ TERMMOD,              XK_underscore,  zoom,           {.f = -1} },
-	{ TERMMOD,              XK_parenright,  zoomreset,      {.f =  0} },
-	{ TERMMOD,              XK_C,           clipcopy,       {.i =  0} },
-	{ TERMMOD,              XK_V,           clippaste,      {.i =  0} },
-	{ TERMMOD,              XK_Y,           selpaste,       {.i =  0} },
-	{ ShiftMask,            XK_Insert,      selpaste,       {.i =  0} },
-	{ TERMMOD,              XK_Num_Lock,    numlock,        {.i =  0} },
+	{ TERMMOD,              XK_parenright,  zoomreset,      {0} },
+	{ TERMMOD,              XK_C,           clipcopy,       {0} },
+	{ TERMMOD,              XK_V,           clippaste,      {0} },
+	{ TERMMOD,              XK_Y,           selpaste,       {0} },
+	{ ShiftMask,            XK_Insert,      selpaste,       {0} },
+	{ TERMMOD,              XK_Num_Lock,    numlock,        {0} },
+	{ ALTMOD,               XK_R,           termreset,      {0} },
+	{ TERMMOD,              XK_T,           newterm,        {0} },
 	{ TERMMOD,              XK_Up,          kscrollup,      {.i = +1} },
 	{ TERMMOD,              XK_Down,        kscrolldown,    {.i = +1} },
 	{ TERMMOD,              XK_Prior,       kscrollup,      {.i = -1} },
@@ -226,7 +228,6 @@ static Shortcut shortcuts[] = {
 	{ TERMMOD,              XK_U,           kscrollup,      {.i = -2} },
 	{ ALTMOD,               XK_D,           kscrolldown,    {.i = -2} },
 	{ ALTMOD,               XK_U,           kscrollup,      {.i = -2} },
-	{ TERMMOD,              XK_T,           newterm,        {.i =  0} },
 	{ TERMMOD,              XK_P,           externalpipe,   {.v = &pager} },
 };
 

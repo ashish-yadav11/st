@@ -2452,6 +2452,16 @@ sendbreak(const Arg *arg)
 }
 
 void
+termreset(const Arg *arg)
+{
+	if (IS_SET(MODE_ALTSCREEN))
+		return;
+	treset();
+	xloadcols();
+	xsetmode(0, MODE_HIDE);
+}
+
+void
 tprinter(char *s, size_t len)
 {
 	if (iofd != -1 && xwrite(iofd, s, len) < 0) {
