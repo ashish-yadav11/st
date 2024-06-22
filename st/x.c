@@ -1636,11 +1636,11 @@ xsettitle(int i, char *p, int pop)
 		(*pstack)[*pstki] = NULL;
 		*pstki = (*pstki - 1 + TITLESTACKSIZE) % TITLESTACKSIZE;
 		p = (*pstack)[*pstki] ? (*pstack)[*pstki] : opt_title;
-	} else if (p) {
-		(*pstack)[*pstki] = xstrdup(p);
-	} else {
+	} else if (!p || p[0] == '\0') {
 		(*pstack)[*pstki] = NULL;
 		p = opt_title;
+	} else {
+		(*pstack)[*pstki] = xstrdup(p);
 	}
 
 	if (Xutf8TextListToTextProperty(xw.dpy, &p, 1, XUTF8StringStyle,
