@@ -1869,6 +1869,10 @@ tsetmode(int priv, int set, const int *args, int narg)
 			case 2004: /* 2004: bracketed paste mode */
 				xsetmode(set, MODE_BRCKTPASTE);
 				break;
+			/* Not implemented neovim codes */
+			case 2031:
+			case 2048:
+				break;
 			/* Not implemented mouse modes. See comments there. */
 			case 1001: /* mouse highlight mode; can hang the
 			              terminal by design when implemented. */
@@ -2128,7 +2132,8 @@ csihandle(void)
 		break;
 	case 'u': /* DECRC -- Restore cursor position (ANSI.SYS) */
 		if (csiescseq.priv) {
-			goto unknown;
+			/* Not implemented neovim codes */
+			break;
 		} else {
 			tcursor(CURSOR_LOAD);
 		}
@@ -2180,6 +2185,10 @@ csihandle(void)
 		default:
 			goto unknown;
 		}
+	/* Not implemented neovim codes */
+	case '$':
+	case '>':
+		break;
 	}
 }
 
