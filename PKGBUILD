@@ -16,7 +16,7 @@ optdepends=('neovim: required by st-pager'
             'libnotify: required by st-plumber')
 provides=(st)
 conflicts=(st)
-options=('!strip')
+options=(debug '!strip')
 source=("$_pkgname.tar.gz"
         "$_pkgname.desktop")
 sha256sums=(SKIP
