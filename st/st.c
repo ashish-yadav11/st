@@ -1740,14 +1740,14 @@ tsetattr(const int *attr, int l)
 			if ((idx = tdefcolor(attr, &i, l)) >= 0)
 				term.c.attr.fg = idx;
 			break;
-		case 39:
+		case 39: /* set foreground color to default */
 			term.c.attr.fg = defaultfg;
 			break;
 		case 48:
 			if ((idx = tdefcolor(attr, &i, l)) >= 0)
 				term.c.attr.bg = idx;
 			break;
-		case 49:
+		case 49: /* set background color to default */
 			term.c.attr.bg = defaultbg;
 			break;
 		case 58:
@@ -1852,7 +1852,7 @@ tsetmode(int priv, int set, const int *args, int narg)
 			case 1006: /* 1006: extended reporting mode */
 				xsetmode(set, MODE_MOUSESGR);
 				break;
-			case 1034:
+			case 1034: /* 1034: enable 8-bit mode for keyboard input */
 				xsetmode(set, MODE_8BIT);
 				break;
 			case 1049: /* swap screen + save/restore cursor, clearing
@@ -1867,7 +1867,7 @@ tsetmode(int priv, int set, const int *args, int narg)
 				else
 					tloaddefscreen(*args != 47, *args == 1049);
 				break;
-			case 1048:
+			case 1048: /* save/restore cursor (like DECSC/DECRC) */
 				if (!allowaltscreen)
 					break;
 				tcursor(set ? CURSOR_SAVE : CURSOR_LOAD);
@@ -2289,7 +2289,7 @@ strhandle(void)
 			if (narg > 1)
 				savepwd(STRESCARGREST(1));
 			return;
-		case 52:
+		case 52: /* manipulate selection data */
 			if (narg > 2 && allowwindowops) {
 				dec = base64dec(STRESCARGJUST(2));
 				if (dec) {
@@ -2300,9 +2300,9 @@ strhandle(void)
 				}
 			}
 			return;
-		case 10:
-		case 11:
-		case 12:
+		case 10: /* set dynamic VT100 text foreground color */
+		case 11: /* set dynamic VT100 text background color */
+		case 12: /* set dynamic text cursor color */
 			if (narg < 2)
 				break;
 			p = STRESCARGJUST(1);
@@ -2342,9 +2342,9 @@ strhandle(void)
 				tfulldirt();
 			}
 			return;
-		case 110:
-		case 111:
-		case 112:
+		case 110: /* reset dynamic VT100 text foreground color */
+		case 111: /* reset dynamic VT100 text background color */
+		case 112: /* reset dynamic text cursor color */
 			if (narg != 1)
 				break;
 			if ((j = par - 110) < 0 || j >= LEN(osc_table))
