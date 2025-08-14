@@ -2342,6 +2342,19 @@ strhandle(void)
 				tfulldirt();
 			}
 			return;
+		case 110:
+		case 111:
+		case 112:
+			if (narg != 1)
+				break;
+			if ((j = par - 110) < 0 || j >= LEN(osc_table))
+				break; /* shouldn't be possible */
+			if (xsetcolorname(osc_table[j].idx, NULL)) {
+				fprintf(stderr, "erresc: %s color not found\n", osc_table[j].str);
+			} else {
+				tfulldirt();
+			}
+			return;
 		}
 		break;
 	case 'k': /* old title set compatibility */
